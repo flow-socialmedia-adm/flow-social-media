@@ -1,0 +1,69 @@
+═══════════════════════════════════════════════════════════════
+🔍 TESTE COM MONITORAMENTO ATIVO
+═══════════════════════════════════════════════════════════════
+
+✅ SISTEMA ESTÁVEL E PRONTO PARA TESTE!
+
+═══════════════════════════════════════════════════════════════
+📋 INSTRUÇÕES SIMPLES:
+═══════════════════════════════════════════════════════════════
+
+1. Abra DUAS janelas lado a lado:
+   
+   JANELA 1: Chrome com http://localhost:5173
+   JANELA 2: Já abri um PowerShell com monitor automático
+              (deve estar mostrando logs coloridos)
+
+2. No Chrome:
+   - Pressione F12 para abrir o Console
+   - Deixe visível embaixo
+
+3. Faça LOGIN normalmente
+
+4. CLIQUE nas páginas do menu:
+   - Dashboard
+   - Clientes
+   - Agenda
+   - Financeiro
+   - Etc...
+
+5. QUANDO TRAVAR:
+   - NÃO feche nada
+   - Veja os logs no Console (F12)
+   - Veja os logs no Monitor (PowerShell)
+   - Me diga qual foi o ÚLTIMO log que apareceu
+
+═══════════════════════════════════════════════════════════════
+🎯 O QUE VOU VER NOS LOGS:
+═══════════════════════════════════════════════════════════════
+
+Quando você CLICAR em uma página, deve aparecer:
+
+  [Sidebar] Click em clientes, tempo desde último: XXXms
+  [Sidebar] ✅ Navegando para clientes
+  [Sidebar] ✅ setPage(clientes) executado
+  [Sidebar] ✅ onClose() executado
+  [App] 🔄 setPage chamado: dashboard → clientes
+  [App] ✅ setPage executado com sucesso
+
+═══════════════════════════════════════════════════════════════
+🚨 SE TRAVAR:
+═══════════════════════════════════════════════════════════════
+
+ME DIGA:
+
+1. Qual foi o ÚLTIMO LOG que apareceu?
+2. Em qual página você estava?
+3. Para qual página tentou ir?
+4. Quantos cliques tinha dado antes de travar?
+
+═══════════════════════════════════════════════════════════════
+🎬 COMECE AGORA!
+═══════════════════════════════════════════════════════════════
+
+→ Abra: http://localhost:5173
+→ Console (F12) aberto
+→ Monitor PowerShell visível
+→ TESTE e ME DIGA quando travar!
+
+═══════════════════════════════════════════════════════════════

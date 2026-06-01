@@ -1,0 +1,104 @@
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║              🚀 FLOW ERP - COMEÇE AQUI! 🚀                  ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+
+
+┌──────────────────────────────────────────────────────────────┐
+│  PASSO 1: INICIAR O SISTEMA                                  │
+└──────────────────────────────────────────────────────────────┘
+
+   👉 Clique DUAS VEZES em: start.bat
+
+   O que vai acontecer:
+   ✅ Docker inicia automaticamente
+   ✅ API inicia na porta 3000
+   ✅ Frontend inicia na porta 5173
+   ✅ Abre 2 terminais (um para API, outro para Frontend)
+
+   ⏱️  AGUARDE ~10 SEGUNDOS para tudo iniciar!
+
+
+┌──────────────────────────────────────────────────────────────┐
+│  PASSO 2: ACESSAR A APLICAÇÃO                                │
+└──────────────────────────────────────────────────────────────┘
+
+   👉 Abra seu navegador e vá para:
+
+      http://localhost:5173
+
+   🎉 Pronto! Você já pode usar o sistema!
+
+
+┌──────────────────────────────────────────────────────────────┐
+│  PASSO 3 (OPCIONAL): TESTAR SE ESTÁ TUDO OK                  │
+└──────────────────────────────────────────────────────────────┘
+
+   👉 Clique DUAS VEZES em: test-auto.bat
+
+   Vai testar:
+   ✅ Docker rodando
+   ✅ API funcionando
+   ✅ Frontend carregando
+   ✅ Sistema de autenticação
+
+
+┌──────────────────────────────────────────────────────────────┐
+│  PARAR O SISTEMA (Quando terminar de usar)                   │
+└──────────────────────────────────────────────────────────────┘
+
+   👉 Clique DUAS VEZES em: stop.bat
+
+   Vai parar:
+   ✅ Docker
+   ✅ API
+   ✅ Frontend
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                  📚 ARQUIVOS IMPORTANTES                      ║
+╚══════════════════════════════════════════════════════════════╝
+
+   start.bat          ➜  Iniciar tudo
+   test-auto.bat      ➜  Testar sistema
+   stop.bat           ➜  Parar tudo
+
+   INICIO_RAPIDO.md   ➜  Guia rápido detalhado
+   README.md          ➜  Documentação completa
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                     ❓ PROBLEMAS?                            ║
+╚══════════════════════════════════════════════════════════════╝
+
+   "Docker não está rodando"
+   ➜ Inicie o Docker Desktop primeiro
+
+   "Erro de conexão"
+   ➜ Execute start.bat e aguarde 10 segundos
+
+   "Página não carrega"
+   ➜ Execute test-auto.bat para ver o que falhou
+
+   Mais ajuda:
+   ➜ Abra INICIO_RAPIDO.md
+
+
+╔══════════════════════════════════════════════════════════════╗
+║                    🎯 FLUXO DO DIA A DIA                     ║
+╚══════════════════════════════════════════════════════════════╝
+
+   1️⃣  Ligar o computador
+   2️⃣  Clique 2x em start.bat
+   3️⃣  Aguarde 10 segundos ⏱️
+   4️⃣  Abra http://localhost:5173
+   5️⃣  Use o sistema normalmente 💼
+   6️⃣  Quando terminar, clique 2x em stop.bat
+
+
+╔══════════════════════════════════════════════════════════════╗
+║              ✨ PRONTO PARA COMEÇAR! ✨                      ║
+║                                                              ║
+║          👉 Clique 2x em start.bat agora! 👈                ║
+╚══════════════════════════════════════════════════════════════╝

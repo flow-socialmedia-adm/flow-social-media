@@ -1,0 +1,50 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Prisma / segredos locais (start.ps1 e setup-flow.ps1 criam no disco; não versionar)
+prisma/.env
+prisma/.env.backup
+prisma/.env.local
+prisma/prisma-env-backup*.txt
+
+# API — variáveis locais (não versionar)
+apps/api/.env
+apps/api/.env.local
+
+# Backups de banco (manter fora do repositório)
+flow_backup.sql
+
+
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+.cursor/
+.vscode/
+dist/
+node_modules/
+flow_backup.sql

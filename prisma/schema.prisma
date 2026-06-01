@@ -1,0 +1,345 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MemberInviteStatus {
+  pending_invite
+  active
+  disabled
+}
+
+model Agency {
+  id                  String             @id @default(uuid())
+  name                String
+  cnpj                String?
+  email               String
+  phone               String?
+  addressJson         Json?
+  logoUrl             String?
+  brandColor          String             @default("Indigo")
+  baseCurrency        Currency
+  planTier            PlanTier
+  subscriptionStatus  SubscriptionStatus
+  maxUsers            Int                @default(3)
+  createdAt           DateTime           @default(now())
+  billingCustomerId   String?
+  billingProvider     String?
+  cardBrand           String?
+  cardLast4           String?
+  cardOnFile          Boolean            @default(false)
+  planTierV2          String?
+  trialEnd            DateTime?
+  trialStart          DateTime?
+  deletedAt           DateTime?
+  hasSeenHomeTour     Boolean            @default(false)
+  mode                AgencyMode?        @default(SOLO)
+  onboardingCompleted Boolean            @default(false)
+  showGuidedTour      Boolean            @default(true)
+  defaultOwnerStrategy DefaultOwnerStrategy @default(AGENCY_OWNER)
+  allowStageOwners    Boolean            @default(false)
+  operationMode       AgencyOperationMode @default(solo)
+  clientResponsibleMode ClientResponsibleMode @default(per_client_planning)
+  defaultClientOwnerUserId String?
+  activityLogs        ActivityLog[]
+  agencyRoles         AgencyRole[]
+  clients             Client[]
+  financialEntries    FinancialEntry[]
+  tasks               Task[]
+  users               User[]
+  workflows           Workflow[]
+}
+
+model AgencyRole {
+  id            String   @id @default(uuid())
+  agencyId      String
+  name          String
+  accessLevel   String
+  permissions   Json
+  flags         Json
+  isSystem      Boolean  @default(false)
+  systemKey     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  agency        Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  users         User[]
+
+  @@unique([agencyId, systemKey])
+  @@index([agencyId])
+}
+
+model User {
+  id                     String        @id @default(uuid())
+  agencyId               String
+  email                  String
+  passwordHash           String?
+  fullName               String
+  avatarUrl              String?
+  role                   Role
+  permissions            Json?
+  jobTitle               String?
+  phone                  String?
+  operationalRole        OperationalRole @default(OUTRO)
+  canBeTaskOwner         Boolean       @default(true)
+  canBePostOwner         Boolean       @default(true)
+  canBeClientOwner       Boolean       @default(true)
+  canBePlanningOwner     Boolean       @default(true)
+  agencyRoleId           String?
+  birthDate              String?
+  createdAt              DateTime      @default(now())
+  deletedAt              DateTime?
+  hasSeenTasksOnboarding Boolean       @default(false)
+  inviteStatus           MemberInviteStatus @default(active)
+  /// Identificador público do convite (lookup); segredo vai só no hash.
+  invitePublicId         String?       @unique
+  inviteTokenHash        String?
+  inviteExpiresAt        DateTime?
+  invitedAt              DateTime?
+  activatedAt            DateTime?
+  passwordResetPublicId  String?
+  passwordResetTokenHash String?
+  passwordResetExpiresAt DateTime?
+  /// Funções operacionais múltiplas (JSON string[]); complementa AgencyRole / operationalRole.
+  userFunctions          Json               @default("[]")
+  /// Usado no modo `lean` para permissões sem depender de `AgencyRole`.
+  simpleAccessLevel      SimpleAccessLevel?
+  activityLogs           ActivityLog[]
+  agency                 Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agencyRole             AgencyRole?   @relation(fields: [agencyRoleId], references: [id], onDelete: SetNull)
+
+  @@unique([email, agencyId])
+  @@index([invitePublicId])
+  @@index([passwordResetPublicId])
+}
+
+model Client {
+  id                    String           @id @default(uuid())
+  agencyId              String
+  name                  String
+  color                 String?
+  avatarUrl             String?
+  type                  ClientType
+  document              String?
+  currency              Currency
+  active                Boolean          @default(true)
+  addressJson           Json?
+  brandGuideJson        Json?
+  socialLinksJson       Json?
+  accessCredentialsJson Json?
+  contractJson          Json?
+  notes                 String?
+  deletedAt             DateTime?
+  website               String?
+  contactsJson          Json?
+  clientOwnerPreferencesJson Json?
+  agency                Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  financialEntries      FinancialEntry[]
+  tasks                 Task[]
+}
+
+model Workflow {
+  id           String           @id @default(uuid())
+  agencyId     String
+  category     WorkflowCategory
+  name         String
+  isCustom     Boolean          @default(false)
+  statusesJson Json
+  agency       Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+}
+
+model Task {
+  id                       String              @id @default(uuid())
+  agencyId                 String
+  clientId                 String?
+  title                    String
+  date                     DateTime
+  postType                 PostType?
+  workflowId               String
+  statusId                 String
+  description              String?
+  category                 String?
+  ownerUserId              String?
+  /// Quem criou o registro (exibição "Criado por"); não confundir com ownerUserId (responsável pelo cliente/post).
+  createdByUserId          String?
+  /// Atribuição automática por substatus (modo equipe lean/structured).
+  executionOwnerUserId     String?
+  dueDate                  DateTime?
+  isProvisionalDueDate     Boolean?            @default(false)
+  isProvisionalPublishDate Boolean?            @default(false)
+  publishDate              DateTime?
+  bornAsForecast           Boolean?
+  convertedToPostAt        DateTime?
+  currentActionId          String?
+  origin                   String?
+  agency                   Agency              @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  client                   Client?             @relation(fields: [clientId], references: [id])
+  statusHistory            TaskStatusHistory[]
+}
+
+model TaskStatusHistory {
+  id              String   @id @default(uuid())
+  taskId          String
+  statusId        String
+  userId          String?
+  changedAt       DateTime @default(now())
+  changeSource    String?
+  currentActionId String?
+  /// Metadados opcionais (ex.: evento de execution owner automático).
+  detailJson      Json?
+  task            Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}
+
+model FinancialEntry {
+  id          String          @id @default(uuid())
+  agencyId    String
+  clientId    String?
+  type        FinancialType
+  description String
+  category    String
+  value       Decimal         @db.Decimal(18, 4)
+  currency    Currency
+  dueDate     DateTime
+  paymentDate DateTime?
+  status      FinancialStatus
+  recurrence  Recurrence
+  supplier    String?
+  agency      Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  client      Client?         @relation(fields: [clientId], references: [id])
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  agencyId    String
+  userId      String
+  actionKey   String
+  targetName  String?
+  detailsJson Json?
+  createdAt   DateTime @default(now())
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+model ExchangeRate {
+  id     String   @id @default(uuid())
+  date   DateTime
+  base   Currency
+  target Currency
+  rate   Decimal  @db.Decimal(18, 8)
+
+  @@unique([date, base, target])
+}
+
+enum Role {
+  owner
+  admin
+  editor
+}
+
+enum PlanTier {
+  plan_1
+  plan_2
+  plan_3
+}
+
+enum SubscriptionStatus {
+  active
+  past_due
+  canceled
+  trialing
+}
+
+enum Currency {
+  BRL
+  USD
+  EUR
+}
+
+enum ClientType {
+  company
+  individual
+}
+
+enum PostType {
+  static
+  video
+  carousel
+  reels
+  story
+}
+
+enum WorkflowCategory {
+  client
+  general
+}
+
+enum FinancialType {
+  income
+  expense
+}
+
+enum FinancialStatus {
+  pending
+  paid
+  overdue
+}
+
+enum Recurrence {
+  monthly
+  yearly
+  none
+}
+
+enum AgencyMode {
+  SOLO
+  TEAM
+}
+
+enum AgencyOperationMode {
+  solo
+  lean
+  structured
+}
+
+/// Nível simples de acesso (modo lean). Modo structured ignora este campo na resolução.
+enum SimpleAccessLevel {
+  colaboracao
+  gerenciar
+  acesso_total
+  administrador
+  gestor
+  operacional
+  financeiro
+}
+
+enum ClientResponsibleMode {
+  default_member
+  per_client_planning
+}
+
+enum DefaultOwnerStrategy {
+  AGENCY_OWNER
+  MANUAL
+}
+
+enum OperationalRole {
+  SOCIAL_MEDIA
+  DESIGNER
+  VIDEO_EDITOR
+  ATENDIMENTO
+  GESTOR
+  APROVACAO
+  OUTRO
+}
+
+enum PlanTierV2 {
+  agencia
+  starter
+  pro
+  premium
+}

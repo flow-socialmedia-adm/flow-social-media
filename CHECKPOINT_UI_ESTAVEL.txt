@@ -1,0 +1,32 @@
+CHECKPOINT: UI estável - Sub-header SaaS, legenda abaixo, controles à direita
+=============================================================================
+
+Data: 03/02/2026
+Commit: e22112a
+
+Esta versão estável consolida o padrão SaaS do topo das páginas Posts, Tarefas e Agenda.
+
+ALTERAÇÕES INCLUÍDAS:
+- TopBar global sem título da página (apenas Ajuda/Idioma); altura fixa h-16.
+- Sub-header por página: título + ícone do olho na primeira linha; legenda (chips de status) exibida ABAIXO do título quando olho ativado (não mais ao lado).
+- Barra de controles com border-t separando título/legenda dos filtros; em Agenda: views + navegação ao centro, Filtros + Exibir + + à direita; em Posts e Tarefas: filtros + chips + botão + alinhados à direita.
+- Componente AddButton padronizado (circular +, tooltip, dropdown na Agenda para Novo Post / Nova Tarefa).
+- StatusLegendPopover com props chipsInline e onVisibilityChange para suportar legenda em sub-bar.
+- i18n: chaves new_post, adicionar.
+- Sub-etapas nas colunas do Kanban em Posts (ex.: Pauta Criada • Em Produção).
+
+ARQUIVOS PRINCIPAIS:
+- components/Header.tsx
+- components/AgendaPage.tsx
+- components/ProducaoPage.tsx
+- components/TarefasPage.tsx
+- components/StatusLegendPopover.tsx
+- components/AddButton.tsx
+- components/SectionHeader.tsx (não usado nas 3 páginas; mantido no projeto)
+- lib/i18n.ts
+
+PARA RESTAURAR ESTA VERSÃO NO FUTURO:
+git checkout e22112a
+
+Ou restaurar apenas arquivos de UI:
+git checkout e22112a -- components/Header.tsx components/AgendaPage.tsx components/ProducaoPage.tsx components/TarefasPage.tsx components/StatusLegendPopover.tsx components/AddButton.tsx lib/i18n.ts

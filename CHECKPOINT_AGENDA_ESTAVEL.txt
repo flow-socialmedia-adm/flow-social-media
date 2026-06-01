@@ -1,0 +1,34 @@
+CHECKPOINT: Página Agenda - Versão Estável
+==========================================
+
+Data: 14/01/2026
+Commit: 3b071e7
+
+Este checkpoint marca uma versão estável da página de Agenda antes de novos ajustes.
+
+ARQUIVOS INCLUÍDOS NO CHECKPOINT:
+- components/AgendaPage.tsx
+- types.ts
+- prisma/schema.prisma
+- apps/api/src/tasks/dto/create-task.dto.ts
+- apps/api/src/tasks/tasks.service.ts
+- prisma/migrations/20260114152252_add_category_to_task/
+
+FUNCIONALIDADES IMPLEMENTADAS:
+✓ Sistema de tags/badges (POST roxo, TAREFA azul escuro)
+✓ Campo categoria para tarefas gerais (12 opções padrão)
+✓ Campo descrição (textarea) em ambos os modais
+✓ Modais reorganizados (Data primeiro)
+✓ Visualização Kanban melhorada (headers com degradê + bolinha)
+✓ Degradê contínuo na visualização mensal
+✓ Kanban centralizado na página
+✓ Problema de atualização corrigido
+✓ Cantos arredondados na visualização mensal
+✓ Tags exibidas em todas as visualizações
+✓ Categoria exibida nas tarefas gerais
+
+PARA RESTAURAR ESTE CHECKPOINT:
+git checkout 3b071e7 -- components/AgendaPage.tsx types.ts prisma/schema.prisma apps/api/src/tasks/dto/create-task.dto.ts apps/api/src/tasks/tasks.service.ts
+
+OU restaurar o commit completo:
+git reset --hard 3b071e7

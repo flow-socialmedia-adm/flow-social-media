@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "website" TEXT;
+ALTER TABLE "Client" ADD COLUMN IF NOT EXISTS "contactsJson" JSONB;
