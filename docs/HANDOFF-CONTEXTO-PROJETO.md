@@ -1,16 +1,21 @@
-# Flow ERP — Documento de contexto e handoff
+# Flow Social Media — Documento de contexto e handoff
 
 **Objetivo:** abrir este arquivo em um novo chat, nova pasta ou novo repositório e recuperar o estado do projeto sem depender do histórico anterior do Cursor.
 
-**Última atualização:** maio/2026  
-**Branch principal protegida:** `master` @ commit `fa68cb7`  
-**GitHub:** https://github.com/maevetheron-hash/flow-erp.git
+**Última atualização:** junho/2026  
+**Pasta oficial:** `C:\Users\mari_\Projects\flow-social-media`  
+**Branch principal:** `master` @ commit `ce7302a` (commit inicial deste repositório)  
+**GitHub (atual):** https://github.com/flow-socialmedia-adm/flow-social-media  
+**Remote SSH:** `git@github-flow:flow-socialmedia-adm/flow-social-media.git`  
+**Git local (este repo):** `Flow Social Media` &lt;flowsocialmedia.adm@gmail.com&gt;
+
+> **Histórico:** o código MVP foi desenvolvido antes no repositório `maevetheron-hash/flow-erp` (checkpoint `fa68cb7`). Esse repositório é apenas **referência/backup** — não é a origem atual de commits nem push.
 
 ---
 
 ## 1. O que é o sistema
 
-**Flow ERP** é um ERP/CRM para **agências de mídia social e freelancers**. Centraliza:
+**Flow Social Media** (produto; em partes do código/docs ainda aparece o nome legado *Flow ERP*) é um ERP/CRM para **agências de mídia social e freelancers**. Centraliza:
 
 - Cadastro e estratégia de **clientes** (brand guide, frequência de posts, pilares, contratos)
 - **Calendário Editorial** (planejamento mensal/semanal, previsões e posts)
@@ -35,7 +40,7 @@
 | i18n | `lib/i18n.ts` (pt / en / es) |
 
 ```
-(repositório)/
+C:\Users\mari_\Projects\flow-social-media\
 ├── App.tsx                 # Shell, rotas por `page`, AppContext
 ├── components/             # Páginas e UI (PlanningPage, AgendaPage, ProducaoPage…)
 ├── contexts/               # AppContext, AuthContext, AgencyClientsRosterContext
@@ -55,7 +60,7 @@
 
 - Node.js 20+
 - Docker Desktop
-- Windows: `start.bat` ou `.\start.ps1`
+- Windows: `start.bat` ou `.\start.ps1` (na pasta oficial acima)
 
 ### URLs padrão
 
@@ -109,7 +114,7 @@ Permissões por papel: `apps/api/src/common/permissions/agency-module-keys.ts` �
 
 ## 5. O que foi construído / ajustado no MVP (cronologia resumida)
 
-Tudo abaixo está na **`master`** após merge de `feature/mvp-editorial-calendar-ux-5.1`.
+O MVP abaixo veio do desenvolvimento anterior (repositório legado) e está presente no código deste repositório a partir de `ce7302a`.
 
 ### 5.1 Central Inteligente e confiança nos dados
 
@@ -138,13 +143,18 @@ Tudo abaixo está na **`master`** após merge de `feature/mvp-editorial-calendar
 - KPIs com escopo **(Agência)** ou **(Cliente)**
 - Insights informativos (5/6 semanas) **sem** CTA “Revisar planejamento”
 
-### 5.4 Checkpoint pré-reorganização
+### 5.4 Marcos operacionais (Fase 5.2 — UI)
 
-- Commit **`fa68cb7`**: `Checkpoint antes da reorganização do Flow`
-- `.gitignore` inclui **`flow_backup.sql`**
-- `apps/api/package-lock.json` commitado
+- **`lib/operationalMilestones.ts`** — cálculo produção / aprovação / agendamento (offsets do cadastro do cliente)
+- Exibição em: Calendário Editorial, modal post/previsão, Agenda
+- Ver também: `docs/MVP-PHASE52-INTEGRATION-POINTS.md`
 
-### 5.5 Outras entregas relevantes (já na master)
+### 5.5 Checkpoint legado (repositório antigo — só histórico)
+
+- Repositório **`maevetheron-hash/flow-erp`**, commit **`fa68cb7`**: *Checkpoint antes da reorganização do Flow*
+- Não usar esse remote para push; manter apenas como backup/referência se necessário
+
+### 5.6 Outras entregas relevantes
 
 - Cliente: seções Brand Guide, Estratégia, Planejamento, identidade, contratos
 - Workflow de posts linear (pauta → produção → aprovação → agendamento → publicação)
@@ -194,6 +204,7 @@ Tudo abaixo está na **`master`** após merge de `feature/mvp-editorial-calendar
 | `lib/intelligentCentral.ts` | Builders de insights |
 | `lib/planningQuota.ts` | Meta mensal / alerta de excesso |
 | `lib/planningCentralView.ts` | Escopo Agência vs cliente na Central do planejamento |
+| `lib/operationalMilestones.ts` | Marcos produção / aprovação / agendamento |
 | `lib/clientContext.ts` | Perfil de planejamento do cliente |
 | `lib/taskActionFlow.ts` | `isRealPostFlowTask`, fluxo linear de post |
 | `lib/postForecastVisual.ts` | `isPostForecast` |
@@ -245,49 +256,56 @@ Definido em **`lib/contentPageHeader.ts`**:
 
 ## 9. Git, branches e checkpoint
 
-### Repositório remoto
+### Repositório remoto (atual)
 
 ```
-origin  https://github.com/maevetheron-hash/flow-erp.git
+origin  git@github-flow:flow-socialmedia-adm/flow-social-media.git
 ```
 
-Branch padrão remota: **`master`** (não `main`).
+| Item | Valor |
+|------|--------|
+| Organização / repo | `flow-socialmedia-adm/flow-social-media` |
+| Branch padrão | **`master`** (não `main`) |
+| SSH | Host alias **`github-flow`** → chave `id_ed25519_flow` |
+| Identidade **local** (só neste repo) | `user.name=Flow Social Media`, `user.email=flowsocialmedia.adm@gmail.com` |
 
-### Commits recentes na master (referência)
+### Commit inicial deste repositório
 
 ```
-fa68cb7 Checkpoint antes da reorganização do Flow
+ce7302a Versão inicial do Flow Social Media
+```
+
+### Histórico legado (não é origem atual)
+
+Repositório anterior: **`maevetheron-hash/flow-erp`** — uso apenas como backup/referência.
+
+```
+fa68cb7 Checkpoint antes da reorganização do Flow   # último checkpoint conhecido no repo antigo
 ae5c318 feat(mvp): reorganize editorial calendar UX (phase 5.1)
 862fb2e feat(mvp): connect planning forecasts to real post creation
-fc20204 feat(mvp): consolidate intelligent central operational rules
-97796cd feat(mvp): add global post counts for intelligent central
-099160d feat(mvp): add global task counts for intelligent central
+…
 ```
 
-### Branches de feature (histórico útil)
+Branches de feature do período legado (referência): `feature/mvp-editorial-calendar-ux-5.1`, `feature/mvp-planning-calendar-posts-connection`, etc.
 
-- `feature/mvp-client-intelligence-central`
-- `feature/mvp-central-intelligence-standardization`
-- `feature/mvp-intelligence-final-rules`
-- `feature/mvp-intelligence-global-counts-tasks` / `posts`
-- `feature/mvp-planning-calendar-posts-connection`
-- `feature/mvp-editorial-calendar-ux-5.1` (mergeada na master)
+### Verificar configuração (PowerShell, na pasta oficial)
 
-**PRs:** várias branches foram apenas push; PR nem sempre foi aberto.
+```powershell
+cd C:\Users\mari_\Projects\flow-social-media
+git remote -v
+git branch -vv
+git config --local user.name
+git config --local user.email
+git fetch origin
+ssh -T git@github-flow
+```
 
-### Ao renomear a pasta do projeto
+### Ao mudar máquina ou clonar de novo
 
-1. Feche API/frontend/Docker ou use `stop.bat`
-2. Renomeie a pasta no Explorer
-3. Reabra o Cursor na **nova pasta**
-4. `git status` deve continuar OK (Git não depende do nome da pasta)
-5. Atualize atalhos/scripts se apontarem caminho absoluto antigo (`C:\Users\mari_\Documents\Projetos\Flow ERP`)
-
-### Ao mudar GitHub / e-mail / chave SSH
-
-1. `git remote set-url origin <nova-url>`
-2. Configure credenciais Git / SSH no Windows
-3. Não commite `.env` nem `flow_backup.sql`
+1. Clone: `git clone git@github-flow:flow-socialmedia-adm/flow-social-media.git`
+2. Pasta recomendada: `C:\Users\mari_\Projects\flow-social-media`
+3. Confirme identidade local: `git config user.name "Flow Social Media"` e `git config user.email "flowsocialmedia.adm@gmail.com"` **dentro do repo**
+4. Não commite `.env` nem `flow_backup.sql`
 
 ---
 
@@ -295,12 +313,12 @@ fc20204 feat(mvp): consolidate intelligent central operational rules
 
 | Item | Onde | No Git? |
 |------|------|---------|
-| **Código + migrations** | GitHub `master` @ `fa68cb7` | Sim |
+| **Código + migrations** | GitHub `flow-socialmedia-adm/flow-social-media` @ `master` | Sim |
 | **Backup SQL** | `flow_backup.sql` na raiz do projeto | **Não** (`.gitignore`) |
 | **Secrets** | `apps/api/.env`, `prisma/.env`, `.env.local` | **Não** |
 | **Uploads locais** | `apps/api/uploads/` (se usado) | Parcial (`.gitkeep`) |
 
-**Recomendação:** copie `flow_backup.sql` para nuvem ou HD externo antes de reorganizar máquina/conta.
+**Recomendação:** copie `flow_backup.sql` para nuvem ou HD externo antes de trocar de máquina.
 
 **Restaurar banco (exemplo):**
 
@@ -319,7 +337,7 @@ docker exec -i flow-erp-postgres psql -U flow -d flow < flow_backup.sql
 | **Este arquivo** | Visão geral handoff |
 | `docs/MVP-INTELLIGENCE-RULES.md` | Regras da Central Inteligente |
 | `docs/AUDIT-MVP-PHASE5-PLANNING-CALENDAR-POSTS.md` | Fluxo planejamento ↔ posts |
-| `docs/MVP-PHASE52-INTEGRATION-POINTS.md` | Próxima fase (marcos operacionais) |
+| `docs/MVP-PHASE52-INTEGRATION-POINTS.md` | Marcos operacionais (integração) |
 | `docs/AUDIT-MVP-INTELLIGENCE-PLANNING-SOURCE.md` | Auditoria de dados dos insights |
 | `docs/MVP-DIAGNOSTICO-BASE.md` | Diagnóstico geral MVP |
 | `README.md` | Instalação e comandos |
@@ -328,16 +346,9 @@ docker exec -i flow-erp-postgres psql -U flow -d flow < flow_backup.sql
 
 ## 12. Próximos passos sugeridos
 
-### Fase 5.2 (planejada, não implementada)
+### Central Inteligente — marcos operacionais
 
-Exibir marcos **produção / aprovação / agendamento** (X dias antes da publicação) em:
-
-- Calendário mensal/semanal
-- Modal de post
-- Agenda
-- Central Inteligente (novos insights só após regra de negócio fechada)
-
-Ver **`docs/MVP-PHASE52-INTEGRATION-POINTS.md`**.
+Insights do tipo “produção deveria ter iniciado” na Central: só após regras de negócio fechadas (`lib/intelligentCentral.ts`).
 
 ### Melhorias técnicas conhecidas
 
@@ -353,14 +364,14 @@ Ver **`docs/MVP-PHASE52-INTEGRATION-POINTS.md`**.
 - Histórico dedicado de planejamento
 - Alterar layout global estabilizado sem pedido explícito
 
-### Reorganização que você vai fazer
+### Reorganização (conta / pasta / GitHub)
 
-- [ ] Novo nome do projeto / pasta
-- [ ] Novo e-mail Git
-- [ ] Novo repositório GitHub (opcional: `git remote set-url` + push `master`)
-- [ ] Novas chaves SSH/PAT
-- [ ] Copiar `flow_backup.sql` e `.env` para local seguro
-- [ ] Abrir este doc no novo workspace do Cursor
+- [x] Nome do projeto: **Flow Social Media**
+- [x] Pasta oficial: `C:\Users\mari_\Projects\flow-social-media`
+- [x] Repositório GitHub: `flow-socialmedia-adm/flow-social-media`
+- [x] Remote SSH `github-flow` + e-mail Git local do projeto
+- [ ] Renomear strings legadas “Flow ERP” na UI/docs (opcional, gradual)
+- [ ] Copiar `flow_backup.sql` e `.env` para local seguro em cada máquina nova
 
 ---
 
@@ -369,10 +380,11 @@ Ver **`docs/MVP-PHASE52-INTEGRATION-POINTS.md`**.
 Cole algo assim:
 
 ```
-Estou continuando o Flow ERP. Leia primeiro docs/HANDOFF-CONTEXTO-PROJETO.md.
-Branch principal: master. Último checkpoint: fa68cb7.
+Estou continuando o Flow Social Media. Leia primeiro docs/HANDOFF-CONTEXTO-PROJETO.md.
+Pasta: C:\Users\mari_\Projects\flow-social-media
+Branch principal: master. Commit de referência: ce7302a.
+GitHub: flow-socialmedia-adm/flow-social-media (SSH github-flow).
 Não alterar backend/regras de previsão/quota/Central builders sem pedido explícito.
-Próxima fase planejada: 5.2 (docs/MVP-PHASE52-INTEGRATION-POINTS.md).
 ```
 
 ---
@@ -381,15 +393,16 @@ Próxima fase planejada: 5.2 (docs/MVP-PHASE52-INTEGRATION-POINTS.md).
 
 _Use este bloco só na sua máquina; pode apagar senhas antes de qualquer push._
 
-| Item | Valor (você preenche) |
-|------|------------------------|
-| GitHub | `maevetheron-hash/flow-erp` |
-| E-mail Git atual | __________________________ |
-| Pasta local (antiga) | `C:\Users\mari_\Documents\Projetos\Flow ERP` |
-| Pasta local (nova) | __________________________ |
+| Item | Valor |
+|------|--------|
+| GitHub (atual) | `flow-socialmedia-adm/flow-social-media` |
+| GitHub (legado / backup) | `maevetheron-hash/flow-erp` |
+| E-mail Git (este repo) | `flowsocialmedia.adm@gmail.com` |
+| Pasta oficial | `C:\Users\mari_\Projects\flow-social-media` |
+| Pasta legada | `C:\Users\mari_\Documents\Projetos\Flow ERP` |
 | Usuário admin dev | __________________________ |
 | Stripe / produção | __________________________ |
 
 ---
 
-*Documento gerado para handoff após MVP Central + Planejamento + UX 5.1 e checkpoint pré-reorganização.*
+*Documento atualizado após migração para o repositório Flow Social Media (`ce7302a`).*
