@@ -1,7 +1,7 @@
 import React, { useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import type { Task, Language } from '../types';
-import { formatDateToYYYYMMDD, getWeekDaysMondayFirst, getExpectedForWeek, getDateRangeForForecastPeriod, computeForecastDatesToCreate, getMonthName, getMonthDays } from '../lib/utils';
+import { formatDateToYYYYMMDD, getWeekDaysMondayFirst, getExpectedForWeek, getDateRangeForForecastPeriod, computeForecastDatesToCreate, getMonthName, getMonthDays, isToday } from '../lib/utils';
 import type { ForecastPeriodKey } from '../lib/utils';
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, PlusIcon, ClipboardListIcon, CalendarIcon, AlertTriangleIcon, FunnelIcon } from './icons';
 import FilterDropdown from './tasks/FilterDropdown';
@@ -32,18 +32,72 @@ import IntelligentCentral from './IntelligentCentral';
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
-function isPlanningToday(date: Date): boolean {
-    return formatDateToYYYYMMDD(date) === formatDateToYYYYMMDD(new Date());
-}
-
-const PLANNING_TODAY_DAY_NUMBER_CLASS =
-    'inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 font-bold text-sky-800 ring-2 ring-sky-500 dark:bg-sky-950/60 dark:text-sky-100 dark:ring-sky-400';
+/** Mesmo marcador de “hoje” da Agenda (mensal). */
+const PLANNING_TODAY_DAY_MARKER_CLASS =
+    'inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white';
 const POSTS_MODAL_TARGET_KEY = 'flow_posts_edit_target_task_id';
 
 function isPreferredDay(client: { preferredPostDays?: string[] }, date: Date): boolean {
     if (!client.preferredPostDays?.length) return false;
     const key = DAY_KEYS[(date.getDay() + 6) % 7];
     return client.preferredPostDays.includes(key);
+}
+
+function buildMonthDayIndicatorTooltip(
+    dayItems: Task[],
+    kind: 'posts' | 'forecasts',
+    clientFilter: string,
+    clientNameById: Map<string, string>,
+    t: (key: string, params?: Record<string, string>) => string,
+): string {
+    const filtered =
+        kind === 'forecasts'
+            ? dayItems.filter((it) => it.category === 'forecast')
+            : dayItems.filter((it) => it.category !== 'forecast');
+    const prefix =
+        kind === 'forecasts' ? t('planning_month_cell_legend_forecasts') : t('planning_month_cell_legend_posts');
+    if (filtered.length === 0) return prefix;
+
+    const detail =
+        clientFilter === 'all'
+            ? [
+                  ...new Set(
+                      filtered.map((it) => clientNameById.get(it.clientId || '') || t('planning_client_unknown')),
+                  ),
+              ].join(', ')
+            : filtered
+                  .map((it) =>
+                      it.title ||
+                      (kind === 'forecasts' ? t('planning_forecast_type') : t('planning_draft_default_title')),
+                  )
+                  .join(', ');
+
+    return `${prefix}: ${detail}`;
+}
+
+function groupPlanningDayItemsByClient(
+    items: Task[],
+    clientNameById: Map<string, string>,
+    unknownClientLabel: string,
+) {
+    const groups = new Map<string, Task[]>();
+    for (const item of items) {
+        const clientId = item.clientId || '';
+        if (!groups.has(clientId)) groups.set(clientId, []);
+        groups.get(clientId)!.push(item);
+    }
+    return [...groups.entries()]
+        .map(([clientId, clientItems]) => ({
+            clientId,
+            clientName: clientNameById.get(clientId) || unknownClientLabel,
+            items: [...clientItems].sort((a, b) => {
+                const aForecast = a.category === 'forecast' ? 1 : 0;
+                const bForecast = b.category === 'forecast' ? 1 : 0;
+                if (aForecast !== bForecast) return aForecast - bForecast;
+                return (a.title || '').localeCompare(b.title || '', 'pt-BR');
+            }),
+        }))
+        .sort((a, b) => a.clientName.localeCompare(b.clientName, 'pt-BR'));
 }
 
 type PlanningClient = {
@@ -792,51 +846,48 @@ const PlanningPage: React.FC = () => {
                             </div>
 
                             <div className="border-t border-gray-200/80 pt-3 dark:border-gray-700/80">
-                                <div
-                                    className={`${CONTENT_PAGE_SUBTOOLBAR_STRIP} mt-0.5 flex min-w-0 flex-wrap items-center justify-between gap-2`}
-                                >
-                                    <div className="flex min-w-0 flex-wrap items-center gap-2">
-                                        <FilterDropdown
-                                            label={t('client')}
-                                            name="clientFilter"
-                                            options={[{ value: 'all', label: t('planning_all_clients') }, ...clients.map((c) => ({ value: c.id, label: c.name }))]}
-                                            value={clientFilter}
-                                            onChange={(_, value) => setClientFilter(value)}
-                                            disabled={clients.length === 0}
-                                            selectClassName="min-w-[160px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                                        />
-                                        <TooltipHint label={t('planning_view_monthly_hint')}>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setPlanningView('monthly');
-                                                    setCurrentMonthAnchor(new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), 1));
-                                                }}
-                                                className={`flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-all ${
-                                                    planningView === 'monthly' ? SUBTOOLBAR_VIEW_ACTIVE_CLASS : SUBTOOLBAR_VIEW_INACTIVE_CLASS
-                                                }`}
-                                            >
-                                                <span>{t('planning_view_monthly')}</span>
-                                            </button>
-                                        </TooltipHint>
-                                        <TooltipHint label={t('planning_view_weekly_hint')}>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setPlanningView('weekly');
-                                                    const monday = getWeekDaysMondayFirst(currentMonthAnchor)[0];
-                                                    monday.setHours(0, 0, 0, 0);
-                                                    setCurrentWeekStart(monday);
-                                                }}
-                                                className={`flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-all ${
-                                                    planningView === 'weekly' ? SUBTOOLBAR_VIEW_ACTIVE_CLASS : SUBTOOLBAR_VIEW_INACTIVE_CLASS
-                                                }`}
-                                            >
-                                                <span>{t('planning_view_weekly')}</span>
-                                            </button>
-                                        </TooltipHint>
-                                    </div>
-                                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                <div className={`${CONTENT_PAGE_SUBTOOLBAR_STRIP} mt-0.5 items-center gap-2`}>
+                                    <FilterDropdown
+                                        layout="inline"
+                                        label={t('client')}
+                                        name="clientFilter"
+                                        options={[{ value: 'all', label: t('planning_all_clients') }, ...clients.map((c) => ({ value: c.id, label: c.name }))]}
+                                        value={clientFilter}
+                                        onChange={(_, value) => setClientFilter(value)}
+                                        disabled={clients.length === 0}
+                                        selectClassName="h-10 min-h-[2.5rem] min-w-[160px] rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-800 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                                    />
+                                    <TooltipHint label={t('planning_view_monthly_hint')}>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setPlanningView('monthly');
+                                                setCurrentMonthAnchor(new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), 1));
+                                            }}
+                                            className={`flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-all ${
+                                                planningView === 'monthly' ? SUBTOOLBAR_VIEW_ACTIVE_CLASS : SUBTOOLBAR_VIEW_INACTIVE_CLASS
+                                            }`}
+                                        >
+                                            <span>{t('planning_view_monthly')}</span>
+                                        </button>
+                                    </TooltipHint>
+                                    <TooltipHint label={t('planning_view_weekly_hint')}>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setPlanningView('weekly');
+                                                const monday = getWeekDaysMondayFirst(currentMonthAnchor)[0];
+                                                monday.setHours(0, 0, 0, 0);
+                                                setCurrentWeekStart(monday);
+                                            }}
+                                            className={`flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-all ${
+                                                planningView === 'weekly' ? SUBTOOLBAR_VIEW_ACTIVE_CLASS : SUBTOOLBAR_VIEW_INACTIVE_CLASS
+                                            }`}
+                                        >
+                                            <span>{t('planning_view_weekly')}</span>
+                                        </button>
+                                    </TooltipHint>
+                                    <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
                                         {planningView === 'weekly' ? (
                                             <>
                                                 <TooltipHint label={t('planning_go_current_week_hint')}>
@@ -873,7 +924,7 @@ const PlanningPage: React.FC = () => {
                                                             <ChevronLeftIcon className="h-5 w-5" />
                                                         </button>
                                                     </TooltipHint>
-                                                    <p className="flex h-10 min-w-[10rem] max-w-[16rem] items-center justify-center px-1 text-center text-base font-bold tabular-nums text-gray-900 dark:text-white sm:text-lg">
+                                                    <p className="flex h-10 min-w-[10rem] max-w-[16rem] items-center justify-center px-1 text-center text-sm font-bold tabular-nums text-gray-900 dark:text-white sm:text-base">
                                                         {getMonthName(currentMonthAnchor, language as Language)}
                                                     </p>
                                                     <TooltipHint label={t('planning_month_nav_next')}>
@@ -901,13 +952,15 @@ const PlanningPage: React.FC = () => {
                                         </div>
                                         <div className="flex-1 min-w-0 grid grid-cols-7 gap-px bg-gradient-to-r from-indigo-100 to-purple-100 dark:from-indigo-900/30 dark:to-purple-900/30 rounded-xl overflow-hidden">
                                         {weekDays.map((d, i) => (
-                                            <div key={i} className="py-3.5 px-2 text-center flex flex-col justify-center">
-                                                <div className="text-[10px] uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-medium">
+                                            <div key={i} className="flex flex-col items-center justify-center px-2 py-3.5 text-center">
+                                                <div className="text-[10px] font-medium uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
                                                     {t(`day_${DAY_KEYS[(d.getDay() + 6) % 7]}`)}
                                                 </div>
                                                 <div
-                                                    className={`mt-0.5 text-2xl font-extrabold text-indigo-900 dark:text-indigo-100 ${
-                                                        isPlanningToday(d) ? PLANNING_TODAY_DAY_NUMBER_CLASS : ''
+                                                    className={`mt-0.5 flex justify-center ${
+                                                        isToday(d)
+                                                            ? PLANNING_TODAY_DAY_MARKER_CLASS
+                                                            : 'text-2xl font-extrabold text-indigo-900 dark:text-indigo-100'
                                                     }`}
                                                 >
                                                     {d.getDate()}
@@ -1100,11 +1153,26 @@ const PlanningPage: React.FC = () => {
                                     <div className="grid grid-cols-7 gap-1.5">
                                         {getMonthDays(currentMonthAnchor).map(({ date, isCurrentMonth }, idx) => {
                                             const ds = formatDateToYYYYMMDD(date);
+                                            const dayItems = planningMonthItemsByDay.get(ds) || [];
                                             const dayStats = planningMonthDayStats.get(ds);
                                             const planned = dayStats?.planned ?? 0;
                                             const forecast = dayStats?.forecast ?? 0;
                                             const hasItems = planned > 0 || forecast > 0;
-                                            const isToday = isCurrentMonth && isPlanningToday(date);
+                                            const isTodayCell = isCurrentMonth && isToday(date);
+                                            const postsTooltip = buildMonthDayIndicatorTooltip(
+                                                dayItems,
+                                                'posts',
+                                                clientFilter,
+                                                clientNameById,
+                                                t,
+                                            );
+                                            const forecastsTooltip = buildMonthDayIndicatorTooltip(
+                                                dayItems,
+                                                'forecasts',
+                                                clientFilter,
+                                                clientNameById,
+                                                t,
+                                            );
                                             return (
                                                 <button
                                                     key={idx}
@@ -1123,12 +1191,10 @@ const PlanningPage: React.FC = () => {
                                                     }`}
                                                 >
                                                     <span
-                                                        className={`text-sm font-semibold ${
-                                                            isToday
-                                                                ? PLANNING_TODAY_DAY_NUMBER_CLASS
-                                                                : isCurrentMonth
-                                                                  ? 'text-gray-900 dark:text-white'
-                                                                  : 'text-gray-400'
+                                                        className={`${
+                                                            isTodayCell
+                                                                ? PLANNING_TODAY_DAY_MARKER_CLASS
+                                                                : `text-sm font-semibold ${isCurrentMonth ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`
                                                         }`}
                                                     >
                                                         {date.getDate()}
@@ -1136,22 +1202,20 @@ const PlanningPage: React.FC = () => {
                                                     {isCurrentMonth && hasItems ? (
                                                         <div className="mt-0.5 flex flex-wrap items-center justify-center gap-1">
                                                             {planned > 0 ? (
-                                                                <span
-                                                                    className="inline-flex items-center gap-0.5 rounded bg-indigo-100 px-1 py-px text-[9px] font-bold leading-none text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200"
-                                                                    title={t('planning_month_cell_legend_posts')}
-                                                                >
-                                                                    <span className="h-1 w-1 rounded-full bg-indigo-600" aria-hidden />
-                                                                    {planned}
-                                                                </span>
+                                                                <TooltipHint label={postsTooltip}>
+                                                                    <span className="inline-flex items-center gap-0.5 rounded bg-indigo-100 px-1 py-px text-[9px] font-bold leading-none text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200">
+                                                                        <span className="h-1 w-1 rounded-full bg-indigo-600" aria-hidden />
+                                                                        {planned}
+                                                                    </span>
+                                                                </TooltipHint>
                                                             ) : null}
                                                             {forecast > 0 ? (
-                                                                <span
-                                                                    className="inline-flex items-center gap-0.5 rounded border border-dashed border-slate-300 bg-slate-100/90 px-1 py-px text-[9px] font-bold leading-none text-slate-600 dark:border-slate-500 dark:bg-slate-800/80 dark:text-slate-300"
-                                                                    title={t('planning_month_cell_legend_forecasts')}
-                                                                >
-                                                                    <span className="h-1 w-1 rounded-full border border-slate-400" aria-hidden />
-                                                                    {forecast}
-                                                                </span>
+                                                                <TooltipHint label={forecastsTooltip}>
+                                                                    <span className="inline-flex items-center gap-0.5 rounded border border-dashed border-slate-300 bg-slate-100/90 px-1 py-px text-[9px] font-bold leading-none text-slate-600 dark:border-slate-500 dark:bg-slate-800/80 dark:text-slate-300">
+                                                                        <span className="h-1 w-1 rounded-full border border-slate-400" aria-hidden />
+                                                                        {forecast}
+                                                                    </span>
+                                                                </TooltipHint>
                                                             ) : null}
                                                         </div>
                                                     ) : null}
@@ -1174,95 +1238,118 @@ const PlanningPage: React.FC = () => {
                                             </h4>
                                             <button type="button" onClick={() => setMonthlyDayDetail(null)} className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">x</button>
                                         </div>
-                                        <div className="space-y-3">
-                                            <div>
-                                                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-indigo-600" />
-                                                    <span>{t('planning_month_posts_section')}</span>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {monthlyDayDetail.items.filter((it) => it.category !== 'forecast').length === 0 ? (
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{t('planning_month_no_posts')}</p>
-                                                    ) : monthlyDayDetail.items.filter((it) => it.category !== 'forecast').map((item) => (
-                                                        <div key={item.id} className="rounded-lg border border-gray-200 bg-gray-50/80 p-2 dark:border-gray-700 dark:bg-gray-800/60">
-                                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{item.title || t('planning_draft_default_title')}</div>
-                                                            <div className="text-xs text-gray-500 dark:text-gray-400">{clientNameById.get(item.clientId || '') || t('planning_client_unknown')}</div>
-                                                            <div className="mt-2">
-                                                                <TooltipHint label={t('planning_month_edit_here_hint')}>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => openEditInPlanning(item)}
-                                                                        className="rounded-md border border-indigo-200 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
-                                                                    >
-                                                                        {t('planning_month_edit_here')}
-                                                                    </button>
-                                                                </TooltipHint>
-                                                                <TooltipHint
-                                                                    label={!canViewPosts ? t('planning_month_no_posts_permission') : t('planning_month_open_in_posts_hint')}
+                                        <div className="max-h-[min(60vh,28rem)] space-y-4 overflow-y-auto pr-1">
+                                            {groupPlanningDayItemsByClient(
+                                                monthlyDayDetail.items,
+                                                clientNameById,
+                                                t('planning_client_unknown'),
+                                            ).map((group) => (
+                                                <section key={group.clientId}>
+                                                    <h5 className="mb-2 border-b border-gray-200 pb-1 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:text-white">
+                                                        {group.clientName}
+                                                    </h5>
+                                                    <div className="space-y-2">
+                                                        {group.items.map((item) => {
+                                                            const isForecast = isForecastTask(item);
+                                                            const status = clientWorkflow?.statuses?.find((s) => s.id === item.statusId);
+                                                            const postTypeLabel = item.postType ? t(item.postType) || item.postType : '';
+                                                            const statusLabel = status ? t(status.nameKey) : '';
+                                                            const secondary = isForecast
+                                                                ? t('planning_forecast')
+                                                                : [postTypeLabel, statusLabel].filter(Boolean).join(' · ');
+                                                            const title =
+                                                                item.title ||
+                                                                (isForecast ? t('planning_forecast_type') : t('planning_draft_default_title'));
+
+                                                            return (
+                                                                <div
+                                                                    key={item.id}
+                                                                    className={`rounded-lg border bg-gray-50/80 p-2.5 dark:bg-gray-800/60 ${
+                                                                        isForecast
+                                                                            ? 'border-dashed border-slate-300 dark:border-slate-600'
+                                                                            : 'border-gray-200 dark:border-gray-700'
+                                                                    }`}
                                                                 >
-                                                                    <button
-                                                                        type="button"
-                                                                        disabled={!canViewPosts}
-                                                                        onClick={() => openTaskInPostsPage(item.id)}
-                                                                        className={`ml-2 rounded-md border px-2.5 py-1 text-xs font-medium ${canViewPosts ? 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700' : 'cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-700 dark:text-gray-500'}`}
-                                                                    >
-                                                                        {t('planning_month_open_in_posts')}
-                                                                    </button>
-                                                                </TooltipHint>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-200">
-                                                    <span className="inline-block h-2.5 w-2.5 rounded-full border border-dashed border-gray-500 bg-gray-100 dark:border-gray-400 dark:bg-gray-700" />
-                                                    <span>{t('planning_month_forecasts_section')}</span>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {monthlyDayDetail.items.filter((it) => it.category === 'forecast').length === 0 ? (
-                                                        <p className="text-xs text-gray-500 dark:text-gray-400">{t('planning_month_no_forecasts')}</p>
-                                                    ) : monthlyDayDetail.items.filter((it) => it.category === 'forecast').map((item) => (
-                                                        <div key={item.id} className="rounded-lg border border-gray-200 bg-gray-50/80 p-2 dark:border-gray-700 dark:bg-gray-800/60">
-                                                            <div className="text-sm font-medium text-gray-900 dark:text-white">{item.title || t('planning_forecast_type')}</div>
-                                                            <div className="text-xs text-gray-500 dark:text-gray-400">{clientNameById.get(item.clientId || '') || t('planning_client_unknown')}</div>
-                                                            <div className="mt-2 flex flex-wrap gap-2">
-                                                                <TooltipHint label={t('planning_month_convert_here_hint')}>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => openEditInPlanning(item)}
-                                                                        className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-                                                                    >
-                                                                        {t('planning_month_convert_here')}
-                                                                    </button>
-                                                                </TooltipHint>
-                                                                <TooltipHint label={t('planning_month_edit_planning_hint')}>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => openEditInPlanning(item)}
-                                                                        className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-                                                                    >
-                                                                        {t('planning_month_edit_planning')}
-                                                                    </button>
-                                                                </TooltipHint>
-                                                                <TooltipHint
-                                                                    label={!canViewPosts ? t('planning_month_no_posts_permission') : t('planning_month_open_in_posts_hint')}
-                                                                >
-                                                                    <button
-                                                                        type="button"
-                                                                        disabled={!canViewPosts}
-                                                                        onClick={() => openTaskInPostsPage(item.id)}
-                                                                        className={`rounded-md border px-2.5 py-1 text-xs font-medium ${canViewPosts ? 'border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-900/30' : 'cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-700 dark:text-gray-500'}`}
-                                                                    >
-                                                                        {t('planning_month_open_in_posts')}
-                                                                    </button>
-                                                                </TooltipHint>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <div className="border-t border-gray-200 pt-3 dark:border-gray-700">
+                                                                    <div className="text-sm font-semibold text-gray-900 dark:text-white">{title}</div>
+                                                                    {secondary ? (
+                                                                        <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{secondary}</div>
+                                                                    ) : null}
+                                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                                        {isForecast ? (
+                                                                            <>
+                                                                                <TooltipHint label={t('planning_month_convert_here_hint')}>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => openEditInPlanning(item)}
+                                                                                        className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                                                                                    >
+                                                                                        {t('planning_month_convert_here')}
+                                                                                    </button>
+                                                                                </TooltipHint>
+                                                                                <TooltipHint label={t('planning_month_edit_planning_hint')}>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => openEditInPlanning(item)}
+                                                                                        className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
+                                                                                    >
+                                                                                        {t('planning_month_edit_planning')}
+                                                                                    </button>
+                                                                                </TooltipHint>
+                                                                                <TooltipHint
+                                                                                    label={
+                                                                                        !canViewPosts
+                                                                                            ? t('planning_month_no_posts_permission')
+                                                                                            : t('planning_month_open_in_posts_hint')
+                                                                                    }
+                                                                                >
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        disabled={!canViewPosts}
+                                                                                        onClick={() => openTaskInPostsPage(item.id)}
+                                                                                        className={`rounded-md border px-2.5 py-1 text-xs font-medium ${canViewPosts ? 'border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-900/30' : 'cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-700 dark:text-gray-500'}`}
+                                                                                    >
+                                                                                        {t('planning_month_open_in_posts')}
+                                                                                    </button>
+                                                                                </TooltipHint>
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <TooltipHint label={t('planning_month_edit_here_hint')}>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => openEditInPlanning(item)}
+                                                                                        className="rounded-md border border-indigo-200 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
+                                                                                    >
+                                                                                        {t('planning_month_edit_here')}
+                                                                                    </button>
+                                                                                </TooltipHint>
+                                                                                <TooltipHint
+                                                                                    label={
+                                                                                        !canViewPosts
+                                                                                            ? t('planning_month_no_posts_permission')
+                                                                                            : t('planning_month_open_in_posts_hint')
+                                                                                    }
+                                                                                >
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        disabled={!canViewPosts}
+                                                                                        onClick={() => openTaskInPostsPage(item.id)}
+                                                                                        className={`rounded-md border px-2.5 py-1 text-xs font-medium ${canViewPosts ? 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700' : 'cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-700 dark:text-gray-500'}`}
+                                                                                    >
+                                                                                        {t('planning_month_open_in_posts')}
+                                                                                    </button>
+                                                                                </TooltipHint>
+                                                                            </>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </section>
+                                            ))}
+                                        </div>
+                                        <div className="mt-3 border-t border-gray-200 pt-3 dark:border-gray-700">
                                                 <div className="flex flex-wrap gap-2">
                                                     <TooltipHint
                                                         label={!canViewPosts ? t('planning_month_no_posts_permission') : t('planning_month_go_posts_hint')}
