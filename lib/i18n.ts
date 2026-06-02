@@ -84,10 +84,40 @@ export const translations: Translations = {
   "agenda_filter_approved_not_scheduled": { "pt": "Aprovados não agendados", "en": "Approved not scheduled", "es": "Aprobados sin programar" },
   "agenda_filter_awaiting_approval": { "pt": "Aguardando aprovação", "en": "Awaiting approval", "es": "En espera de aprobación" },
   "editorial_calendar_subtitle": {
-    "pt": "Planeje o calendário semanal por cliente com previsões e slots.",
-    "en": "Plan the weekly calendar per client with forecasts and slots.",
-    "es": "Planifica el calendario semanal por cliente con previsiones y espacios.",
+    "pt": "Monte aqui o cronograma de publicações por cliente.",
+    "en": "Build each client's publication schedule here.",
+    "es": "Arma aquí el cronograma de publicaciones por cliente.",
   },
+  "planning_pick_client_hint": {
+    "pt": "Escolha um cliente para montar o cronograma de publicações.",
+    "en": "Select a client to build the publication schedule.",
+    "es": "Elige un cliente para armar el cronograma de publicaciones.",
+  },
+  "planning_kpi_planned": { "pt": "{n} planejados", "en": "{n} planned", "es": "{n} planificados" },
+  "planning_kpi_goal": { "pt": "meta: {n}", "en": "goal: {n}", "es": "meta: {n}" },
+  "planning_kpi_missing": { "pt": "faltam: {n}", "en": "missing: {n}", "es": "faltan: {n}" },
+  "planning_kpi_clients_planned": {
+    "pt": "{n} clientes planejados",
+    "en": "{n} clients with schedule",
+    "es": "{n} clientes planificados",
+  },
+  "planning_kpi_clients_gap": {
+    "pt": "{n} clientes com lacuna",
+    "en": "{n} clients with gap",
+    "es": "{n} clientes con brecha",
+  },
+  "planning_intel_alerts_count": {
+    "pt": "{n} alerta(s) de planejamento",
+    "en": "{n} planning alert(s)",
+    "es": "{n} alerta(s) de planificación",
+  },
+  "planning_intel_no_alerts": {
+    "pt": "Nenhum alerta de planejamento",
+    "en": "No planning alerts",
+    "es": "Ninguna alerta de planificación",
+  },
+  "planning_intel_view_details": { "pt": "Ver detalhes", "en": "View details", "es": "Ver detalles" },
+  "planning_intel_hide_details": { "pt": "Ocultar", "en": "Hide", "es": "Ocultar" },
   "posts_page_subtitle": {
     "pt": "Gerencie o fluxo de produção dos posts em visão Kanban.",
     "en": "Manage the post production flow in Kanban view.",

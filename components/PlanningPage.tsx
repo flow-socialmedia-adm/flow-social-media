@@ -1,9 +1,9 @@
 import React, { useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import type { Task, Language } from '../types';
-import { formatDateToYYYYMMDD, getWeekDaysMondayFirst, getExpectedForWeek, getDateRangeForForecastPeriod, computeForecastDatesToCreate, getMonthName, getMonthDays, isToday } from '../lib/utils';
+import { formatDateToYYYYMMDD, getWeekDaysMondayFirst, getExpectedForWeek, getExpectedForMonth, getDateRangeForForecastPeriod, computeForecastDatesToCreate, getMonthName, getMonthDays, isToday } from '../lib/utils';
 import type { ForecastPeriodKey } from '../lib/utils';
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, PlusIcon, ClipboardListIcon, CalendarIcon, AlertTriangleIcon, FunnelIcon } from './icons';
+import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, PlusIcon, FunnelIcon } from './icons';
 import FilterDropdown from './tasks/FilterDropdown';
 import { apiGet, apiPost, apiPut } from '../lib/api';
 import {
@@ -355,11 +355,6 @@ const PlanningPage: React.FC = () => {
         clientFilter,
     ]);
 
-    const kpiScopeSuffix = useMemo(() => {
-        if (clientFilter === 'all') return t('planning_kpi_scope_agency');
-        return t('planning_kpi_scope_client', { name: selectedClient?.name ?? t('planning_client_unknown') });
-    }, [clientFilter, selectedClient, t]);
-
     const postsByClientAndDate = useMemo(() => {
         const map = new Map<string, Task[]>();
         for (const p of planningItems) {
@@ -449,20 +444,70 @@ const PlanningPage: React.FC = () => {
         return Array.from(planningMonthDayStats.values()).reduce((sum, stats) => sum + stats.total, 0);
     }, [planningView, planningMonthDayStats]);
 
-    const monthRealPostsTotal = useMemo(() => {
-        if (planningView !== 'monthly') return 0;
-        return Array.from(planningMonthDayStats.values()).reduce((sum, stats) => sum + stats.planned, 0);
-    }, [planningView, planningMonthDayStats]);
+    const scheduleKpi = useMemo(() => {
+        if (clientFilter !== 'all' && selectedClient) {
+            if (planningView === 'weekly') {
+                const planned = weekSummary.totalPlanned;
+                const goal = weekSummary.totalExpected > 0 ? Math.ceil(weekSummary.totalExpected) : null;
+                const missing = goal != null ? Math.max(0, goal - planned) : null;
+                return { mode: 'client' as const, planned, goal, missing };
+            }
+            const y = currentMonthAnchor.getFullYear();
+            const m = currentMonthAnchor.getMonth();
+            const planned = monthPlannedTotal;
+            const expectedRaw = getExpectedForMonth(selectedClient, y, m);
+            const goal = expectedRaw != null ? Math.ceil(expectedRaw) : null;
+            const missing = goal != null ? Math.max(0, goal - planned) : null;
+            return { mode: 'client' as const, planned, goal, missing };
+        }
 
-    const monthForecastsTotal = useMemo(() => {
-        if (planningView !== 'monthly') return 0;
-        return Array.from(planningMonthDayStats.values()).reduce((sum, stats) => sum + stats.forecast, 0);
-    }, [planningView, planningMonthDayStats]);
+        if (planningView === 'weekly') {
+            let clientsWithPlanning = 0;
+            for (const c of clients) {
+                const clientItems = planningItems.filter(
+                    (p) =>
+                        p.clientId === c.id &&
+                        (p.publishDate ?? p.date) >= startDate &&
+                        (p.publishDate ?? p.date) <= endDate,
+                );
+                if (clientItems.length > 0) clientsWithPlanning += 1;
+            }
+            return {
+                mode: 'agency' as const,
+                clientsWithPlanning,
+                clientsWithGap: weekSummary.clientsWithGap,
+            };
+        }
 
-    const monthDistinctDaysWithPosts = useMemo(() => {
-        if (planningView !== 'monthly') return 0;
-        return planningMonthDayStats.size;
-    }, [planningView, planningMonthDayStats]);
+        const y = currentMonthAnchor.getFullYear();
+        const m = currentMonthAnchor.getMonth();
+        const low = formatDateToYYYYMMDD(new Date(y, m, 1));
+        const hi = formatDateToYYYYMMDD(new Date(y, m + 1, 0));
+        let clientsWithPlanning = 0;
+        let clientsWithGap = 0;
+        for (const c of clients) {
+            const clientItems = planningItems.filter((p) => {
+                const ds = (p.publishDate ?? p.date ?? '').slice(0, 10);
+                return p.clientId === c.id && ds >= low && ds <= hi;
+            });
+            const planned = clientItems.length;
+            if (planned > 0) clientsWithPlanning += 1;
+            const expected = getExpectedForMonth(c, y, m);
+            if (expected != null && planned < Math.ceil(expected)) clientsWithGap += 1;
+        }
+        return { mode: 'agency' as const, clientsWithPlanning, clientsWithGap };
+    }, [
+        clientFilter,
+        selectedClient,
+        planningView,
+        weekSummary,
+        monthPlannedTotal,
+        currentMonthAnchor,
+        clients,
+        planningItems,
+        startDate,
+        endDate,
+    ]);
 
     const openWeekContainingDay = useCallback((day: Date) => {
         const monday = getWeekDaysMondayFirst(day)[0];
@@ -768,76 +813,54 @@ const PlanningPage: React.FC = () => {
                         </div>
                     ) : (
                         <>
-                            {/* Cards de métricas + Dicas Estratégicas na mesma linha */}
-                            <div className="flex flex-wrap gap-4 items-stretch">
-                                <div className="flex flex-wrap gap-3 flex-1 min-w-0">
-                                    {planningView === 'weekly' ? (
+                            <div className="flex flex-col gap-3">
+                                {clientFilter === 'all' ? (
+                                    <p className="rounded-lg border border-amber-200/80 bg-amber-50/70 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-100">
+                                        {t('planning_pick_client_hint')}
+                                    </p>
+                                ) : null}
+                                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-gray-700 dark:text-gray-300">
+                                    {scheduleKpi.mode === 'client' ? (
                                         <>
-                                            <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/20 px-4 py-3 shadow-sm h-[124px]">
-                                                <div className="flex items-center gap-2">
-                                                    <ClipboardListIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                                                    <span className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">{weekSummary.totalPlanned}</span>
-                                                </div>
-                                                <div className="text-xs text-indigo-700 dark:text-indigo-300 text-center">
-                                                    {clientFilter === 'all' ? t('planning_summary_planned_agency') : t('planning_summary_planned_client')}
-                                                </div>
-                                                <div className="text-[10px] text-indigo-600/80 dark:text-indigo-400/80 text-center truncate max-w-[10rem]">{kpiScopeSuffix}</div>
-                                            </div>
-                                            <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-3 shadow-sm h-[124px]">
-                                                <div className="flex items-center gap-2">
-                                                    <CalendarIcon className="w-5 h-5 text-slate-500 dark:text-slate-400 shrink-0" />
-                                                    <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{Math.ceil(weekSummary.totalExpected)}</span>
-                                                </div>
-                                                <div className="text-xs text-slate-600 dark:text-slate-400 text-center">
-                                                    {clientFilter === 'all' ? t('planning_summary_expected_agency') : t('planning_summary_expected_client')}
-                                                </div>
-                                                <div className="text-[10px] text-slate-500 dark:text-slate-500 text-center truncate max-w-[10rem]">{kpiScopeSuffix}</div>
-                                            </div>
-                                            {weekSummary.clientsWithGap > 0 && (
-                                                <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 shadow-sm h-[124px]">
-                                                    <div className="flex items-center gap-2">
-                                                        <AlertTriangleIcon className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                                                        <span className="text-2xl font-bold text-amber-800 dark:text-amber-200">{weekSummary.clientsWithGap}</span>
-                                                    </div>
-                                                    <div className="text-xs text-amber-700 dark:text-amber-300 text-center">{t('planning_summary_clients_gap_agency')}</div>
-                                                </div>
-                                            )}
+                                            <span className="font-semibold text-gray-900 dark:text-white">{selectedClient?.name}</span>
+                                            <span className="text-gray-500 dark:text-gray-400">·</span>
+                                            <span>{t('planning_kpi_planned', { n: scheduleKpi.planned })}</span>
+                                            <span className="text-gray-500 dark:text-gray-400">·</span>
+                                            <span>
+                                                {t('planning_kpi_goal', {
+                                                    n: scheduleKpi.goal != null ? String(scheduleKpi.goal) : '—',
+                                                })}
+                                            </span>
+                                            <span className="text-gray-500 dark:text-gray-400">·</span>
+                                            <span
+                                                className={
+                                                    scheduleKpi.missing != null && scheduleKpi.missing > 0
+                                                        ? 'font-medium text-amber-700 dark:text-amber-300'
+                                                        : undefined
+                                                }
+                                            >
+                                                {t('planning_kpi_missing', {
+                                                    n: scheduleKpi.missing != null ? scheduleKpi.missing : '—',
+                                                })}
+                                            </span>
                                         </>
                                     ) : (
                                         <>
-                                            <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50/60 dark:bg-violet-950/30 px-4 py-3 shadow-sm h-[124px] min-w-[140px]">
-                                                <div className="flex items-center gap-2">
-                                                    <ClipboardListIcon className="w-5 h-5 text-violet-600 dark:text-violet-400 shrink-0" />
-                                                    <span className="text-2xl font-bold text-violet-900 dark:text-violet-100">{monthPlannedTotal}</span>
-                                                </div>
-                                                <div className="text-xs text-violet-800 dark:text-violet-200 text-center max-w-[10rem]">
-                                                    {clientFilter === 'all' ? t('planning_month_summary_planned_agency') : t('planning_month_summary_planned_client')}
-                                                </div>
-                                                <div className="text-[10px] text-violet-700/90 dark:text-violet-300/90 text-center truncate max-w-[10rem]">{kpiScopeSuffix}</div>
-                                            </div>
-                                            <div className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-900/20 px-3 py-3 shadow-sm h-[124px] min-w-[100px]">
-                                                <span className="text-xl font-bold text-indigo-900 dark:text-indigo-100">{monthRealPostsTotal}</span>
-                                                <div className="text-[10px] text-indigo-700 dark:text-indigo-300 text-center leading-tight">{t('planning_month_summary_posts')}</div>
-                                            </div>
-                                            <div className="flex flex-col items-center justify-center gap-0.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 px-3 py-3 shadow-sm h-[124px] min-w-[100px]">
-                                                <span className="text-xl font-bold text-slate-800 dark:text-slate-100">{monthForecastsTotal}</span>
-                                                <div className="text-[10px] text-slate-600 dark:text-slate-400 text-center leading-tight">{t('planning_month_summary_forecasts')}</div>
-                                            </div>
-                                            <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50/50 dark:bg-slate-800/50 px-4 py-3 shadow-sm h-[124px] min-w-[140px]">
-                                                <div className="flex items-center gap-2">
-                                                    <CalendarIcon className="w-5 h-5 text-slate-500 dark:text-slate-400 shrink-0" />
-                                                    <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">{monthDistinctDaysWithPosts}</span>
-                                                </div>
-                                                <div className="text-xs text-slate-600 dark:text-slate-400 text-center max-w-[10rem]">
-                                                    {clientFilter === 'all' ? t('planning_month_summary_active_days_agency') : t('planning_month_summary_active_days_client')}
-                                                </div>
-                                                <div className="text-[10px] text-slate-500 dark:text-slate-500 text-center truncate max-w-[10rem]">{kpiScopeSuffix}</div>
-                                            </div>
+                                            <span>{t('planning_kpi_clients_planned', { n: scheduleKpi.clientsWithPlanning })}</span>
+                                            {scheduleKpi.clientsWithGap > 0 ? (
+                                                <>
+                                                    <span className="text-gray-500 dark:text-gray-400">·</span>
+                                                    <span className="font-medium text-amber-700 dark:text-amber-300">
+                                                        {t('planning_kpi_clients_gap', { n: scheduleKpi.clientsWithGap })}
+                                                    </span>
+                                                </>
+                                            ) : null}
                                         </>
                                     )}
                                 </div>
                                 <IntelligentCentral
-                                    className="max-w-[320px] shrink-0"
+                                    variant="compact"
+                                    className="w-full max-w-xl"
                                     items={planningIntelligenceItems}
                                     t={t}
                                     onAction={handlePlanningIntelAction}
