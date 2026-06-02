@@ -121,6 +121,11 @@ export const translations: Translations = {
   "planning_kpi_planned": { "pt": "{n} planejados", "en": "{n} planned", "es": "{n} planificados" },
   "planning_kpi_goal": { "pt": "meta: {n}", "en": "goal: {n}", "es": "meta: {n}" },
   "planning_kpi_missing": { "pt": "faltam: {n}", "en": "missing: {n}", "es": "faltan: {n}" },
+  "planning_kpi_clients_ready": {
+    "pt": "Clientes prontos para planejamento: {n}",
+    "en": "Clients ready for planning: {n}",
+    "es": "Clientes listos para planificación: {n}",
+  },
   "planning_kpi_clients_started_one": {
     "pt": "1 cliente com cronograma iniciado",
     "en": "1 client with a started schedule",

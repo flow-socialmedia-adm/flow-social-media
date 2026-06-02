@@ -756,7 +756,7 @@ const PlanningPage: React.FC = () => {
             : 'planning_intel_adjustments_other';
     }, [clientFilter, planningIntelligenceItems.length]);
 
-    const planningLockedOverlaySteps = useMemo(
+    const planningEntrySteps = useMemo(
         () => [
             'planning_locked_overlay_step_forecasts',
             'planning_locked_overlay_step_schedule',
@@ -806,6 +806,7 @@ const PlanningPage: React.FC = () => {
                             <div
                                 className="rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-5 py-5 shadow-sm dark:border-indigo-700/60 dark:from-indigo-950/40 dark:via-gray-900 dark:to-violet-950/30"
                                 data-planning-wizard-step="client-entry"
+                                data-planning-wizard-phase={isPlanningLocked ? 'select-client' : 'plan-client'}
                             >
                                 <h2 className="text-lg font-bold text-indigo-950 dark:text-indigo-100">
                                     {isPlanningLocked ? t('planning_entry_title') : t('planning_entry_title_active')}
@@ -830,7 +831,10 @@ const PlanningPage: React.FC = () => {
                                         disabled={clients.length === 0}
                                         selectClassName={clientFilterSelectClass}
                                     />
-                                    {!isPlanningLocked ? (
+                                    <div
+                                        className={isPlanningLocked ? 'hidden' : 'relative inline-flex shrink-0'}
+                                        data-planning-wizard-step="generate-forecasts"
+                                    >
                                         <div ref={forecastPopoverRef} className="relative inline-flex shrink-0">
                                             <TooltipHint
                                                 label={
@@ -885,8 +889,25 @@ const PlanningPage: React.FC = () => {
                                                 </div>
                                             )}
                                         </div>
-                                    ) : null}
+                                    </div>
                                 </div>
+                                {isPlanningLocked ? (
+                                    <div className="mt-5 border-t border-indigo-200/60 pt-4 dark:border-indigo-800/50">
+                                        <p className="text-sm text-indigo-900/80 dark:text-indigo-200/90">
+                                            {t('planning_locked_overlay_intro')}
+                                        </p>
+                                        <ul className="mt-2.5 space-y-1.5 text-sm text-indigo-900/75 dark:text-indigo-200/80">
+                                            {planningEntrySteps.map((key) => (
+                                                <li key={key} className="flex items-start gap-2">
+                                                    <span className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden>
+                                                        ✓
+                                                    </span>
+                                                    <span>{t(key)}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                ) : null}
                             </div>
 
                             <div className="flex flex-col gap-3">
@@ -915,11 +936,7 @@ const PlanningPage: React.FC = () => {
                                         </>
                                     ) : (
                                         <span>
-                                            {scheduleKpi.clientsWithPlanning === 1
-                                                ? t('planning_kpi_clients_started_one')
-                                                : t('planning_kpi_clients_started_other', {
-                                                      n: scheduleKpi.clientsWithPlanning,
-                                                  })}
+                                            {t('planning_kpi_clients_ready', { n: scheduleKpi.clientsWithPlanning })}
                                         </span>
                                     )}
                                 </div>
@@ -934,7 +951,10 @@ const PlanningPage: React.FC = () => {
                                 />
                             </div>
 
-                            <div className="relative min-h-[24rem]">
+                            <div
+                                className="relative"
+                                data-planning-wizard-step="schedule-calendar"
+                            >
                                 <div
                                     className={isPlanningLocked ? 'pointer-events-none select-none opacity-45' : undefined}
                                     aria-hidden={isPlanningLocked}
@@ -1311,28 +1331,6 @@ const PlanningPage: React.FC = () => {
                                 </div>
                             )}
                                 </div>
-                                {isPlanningLocked ? (
-                                    <div className="pointer-events-none absolute inset-0 flex items-start justify-center px-4 pt-16 sm:pt-24">
-                                        <div className="max-w-md rounded-xl border border-indigo-200/80 bg-white/95 px-6 py-5 text-center shadow-lg backdrop-blur-sm dark:border-indigo-700/50 dark:bg-gray-900/95">
-                                            <p className="text-base font-semibold text-gray-900 dark:text-white">
-                                                {t('planning_locked_overlay_title')}
-                                            </p>
-                                            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
-                                                {t('planning_locked_overlay_intro')}
-                                            </p>
-                                            <ul className="mt-3 space-y-1.5 text-left text-sm text-gray-700 dark:text-gray-300">
-                                                {planningLockedOverlaySteps.map((key) => (
-                                                    <li key={key} className="flex items-start gap-2">
-                                                        <span className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden>
-                                                            ✓
-                                                        </span>
-                                                        <span>{t(key)}</span>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                ) : null}
                             </div>
                             {planningView === 'monthly' && monthlyDayDetail && !isPlanningLocked && (
                                 <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/35 p-4" onClick={() => setMonthlyDayDetail(null)}>
