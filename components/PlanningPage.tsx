@@ -1377,7 +1377,6 @@ const PlanningPage: React.FC = () => {
                                                     </TooltipHint>
                                                 </div>
                                             </div>
-                                        </div>
                                     </div>
                                 </div>
                             )}
