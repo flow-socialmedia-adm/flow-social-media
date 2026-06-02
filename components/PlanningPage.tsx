@@ -27,17 +27,17 @@ import TooltipHint from './TooltipHint';
 import { getClientPlanningProfile } from '../lib/clientContext';
 import { buildPlanningIntelligenceItems, type IntelligenceItem } from '../lib/intelligentCentral';
 import { createPlanningQuotaValidator } from '../lib/planningQuota';
-import { formatPlanningPeriodRange, scopePlanningCentralItems } from '../lib/planningCentralView';
+import { scopePlanningCentralItems } from '../lib/planningCentralView';
 import IntelligentCentral from './IntelligentCentral';
-import {
-    buildMilestoneDayIndex,
-    getClientOperationalLeadConfig,
-    getTaskOperationalMilestones,
-    type MilestoneDayCounts,
-} from '../lib/operationalMilestones';
-import { OperationalMilestoneDots, OperationalMilestonesCompactLine } from './OperationalMilestonesPanel';
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+
+function isPlanningToday(date: Date): boolean {
+    return formatDateToYYYYMMDD(date) === formatDateToYYYYMMDD(new Date());
+}
+
+const PLANNING_TODAY_DAY_NUMBER_CLASS =
+    'inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 font-bold text-sky-800 ring-2 ring-sky-500 dark:bg-sky-950/60 dark:text-sky-100 dark:ring-sky-400';
 const POSTS_MODAL_TARGET_KEY = 'flow_posts_edit_target_task_id';
 
 function isPreferredDay(client: { preferredPostDays?: string[] }, date: Date): boolean {
@@ -306,16 +306,6 @@ const PlanningPage: React.FC = () => {
         return t('planning_kpi_scope_client', { name: selectedClient?.name ?? t('planning_client_unknown') });
     }, [clientFilter, selectedClient, t]);
 
-    const planningPeriodLabel = useMemo(() => {
-        const viewLabel =
-            planningView === 'monthly' ? t('planning_period_monthly_label') : t('planning_period_weekly_label');
-        const range =
-            planningView === 'monthly'
-                ? formatPlanningPeriodRange(dataStartDate, dataEndDate)
-                : formatPlanningPeriodRange(startDate, endDate);
-        return { viewLabel, range };
-    }, [planningView, dataStartDate, dataEndDate, startDate, endDate, t]);
-
     const postsByClientAndDate = useMemo(() => {
         const map = new Map<string, Task[]>();
         for (const p of planningItems) {
@@ -382,17 +372,6 @@ const PlanningPage: React.FC = () => {
         }
         return map;
     }, [planningView, planningItems, clientFilter, currentMonthAnchor]);
-
-    const clientById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
-
-    const planningMonthMilestoneStats = useMemo(() => {
-        if (planningView !== 'monthly') return new Map<string, MilestoneDayCounts>();
-        const filtered =
-            clientFilter === 'all' ? planningItems : planningItems.filter((p) => p.clientId === clientFilter);
-        return buildMilestoneDayIndex(filtered, (clientId) =>
-            getClientOperationalLeadConfig(clientById.get(clientId)),
-        );
-    }, [planningView, planningItems, clientFilter, clientById]);
 
     const planningMonthItemsByDay = useMemo(() => {
         const map = new Map<string, Task[]>();
@@ -813,107 +792,99 @@ const PlanningPage: React.FC = () => {
                             </div>
 
                             <div className="border-t border-gray-200/80 pt-3 dark:border-gray-700/80">
-                                <div className="mt-0.5 flex flex-col gap-2">
-                                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-                                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                                    <FilterDropdown
-                                        label={t('client')}
-                                        name="clientFilter"
-                                        options={[{ value: 'all', label: t('planning_all_clients') }, ...clients.map((c) => ({ value: c.id, label: c.name }))]}
-                                        value={clientFilter}
-                                        onChange={(_, value) => setClientFilter(value)}
-                                        disabled={clients.length === 0}
-                                        selectClassName="min-w-[160px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                                    />
-                                    <TooltipHint label={t('planning_view_monthly_hint')}>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setPlanningView('monthly');
-                                                setCurrentMonthAnchor(new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), 1));
-                                            }}
-                                            className={`flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-all ${
-                                                planningView === 'monthly' ? SUBTOOLBAR_VIEW_ACTIVE_CLASS : SUBTOOLBAR_VIEW_INACTIVE_CLASS
-                                            }`}
-                                        >
-                                            <span>{t('planning_view_monthly')}</span>
-                                        </button>
-                                    </TooltipHint>
-                                    <TooltipHint label={t('planning_view_weekly_hint')}>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setPlanningView('weekly');
-                                                const monday = getWeekDaysMondayFirst(currentMonthAnchor)[0];
-                                                monday.setHours(0, 0, 0, 0);
-                                                setCurrentWeekStart(monday);
-                                            }}
-                                            className={`flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-all ${
-                                                planningView === 'weekly' ? SUBTOOLBAR_VIEW_ACTIVE_CLASS : SUBTOOLBAR_VIEW_INACTIVE_CLASS
-                                            }`}
-                                        >
-                                            <span>{t('planning_view_weekly')}</span>
-                                        </button>
-                                    </TooltipHint>
-                                </div>
-                                <div className="flex min-w-0 flex-col items-start gap-0.5 sm:items-end">
-                                    <p className="text-[10px] font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">
-                                        {planningPeriodLabel.viewLabel}
-                                    </p>
-                                    <p className="text-sm font-bold tabular-nums text-gray-900 dark:text-white">
-                                        {planningPeriodLabel.range}
-                                    </p>
-                                </div>
-                                </div>
-                                <div className={`${CONTENT_PAGE_SUBTOOLBAR_STRIP} flex min-w-0 flex-wrap items-center justify-end gap-2`}>
-                                    {planningView === 'weekly' ? (
-                                        <>
-                                            <TooltipHint label={t('planning_go_current_week_hint')}>
-                                                <button type="button" onClick={goThisWeek} className={SUBTOOLBAR_TEXT_BUTTON_CLASS}>
-                                                    {t('today')}
-                                                </button>
-                                            </TooltipHint>
-                                            <div className="flex items-center gap-0.5 sm:gap-1">
-                                                <TooltipHint label={t('planning_week_nav_prev')}>
-                                                    <button type="button" onClick={goPrevWeek} className={SUBTOOLBAR_ICON_BUTTON_CLASS} aria-label={t('planning_week_nav_prev')}>
-                                                        <ChevronLeftIcon className="h-5 w-5" />
+                                <div
+                                    className={`${CONTENT_PAGE_SUBTOOLBAR_STRIP} mt-0.5 flex min-w-0 flex-wrap items-center justify-between gap-2`}
+                                >
+                                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                        <FilterDropdown
+                                            label={t('client')}
+                                            name="clientFilter"
+                                            options={[{ value: 'all', label: t('planning_all_clients') }, ...clients.map((c) => ({ value: c.id, label: c.name }))]}
+                                            value={clientFilter}
+                                            onChange={(_, value) => setClientFilter(value)}
+                                            disabled={clients.length === 0}
+                                            selectClassName="min-w-[160px] rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
+                                        />
+                                        <TooltipHint label={t('planning_view_monthly_hint')}>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setPlanningView('monthly');
+                                                    setCurrentMonthAnchor(new Date(currentWeekStart.getFullYear(), currentWeekStart.getMonth(), 1));
+                                                }}
+                                                className={`flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-all ${
+                                                    planningView === 'monthly' ? SUBTOOLBAR_VIEW_ACTIVE_CLASS : SUBTOOLBAR_VIEW_INACTIVE_CLASS
+                                                }`}
+                                            >
+                                                <span>{t('planning_view_monthly')}</span>
+                                            </button>
+                                        </TooltipHint>
+                                        <TooltipHint label={t('planning_view_weekly_hint')}>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setPlanningView('weekly');
+                                                    const monday = getWeekDaysMondayFirst(currentMonthAnchor)[0];
+                                                    monday.setHours(0, 0, 0, 0);
+                                                    setCurrentWeekStart(monday);
+                                                }}
+                                                className={`flex h-10 shrink-0 items-center gap-1.5 rounded-lg border px-3 text-sm font-medium transition-all ${
+                                                    planningView === 'weekly' ? SUBTOOLBAR_VIEW_ACTIVE_CLASS : SUBTOOLBAR_VIEW_INACTIVE_CLASS
+                                                }`}
+                                            >
+                                                <span>{t('planning_view_weekly')}</span>
+                                            </button>
+                                        </TooltipHint>
+                                    </div>
+                                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                        {planningView === 'weekly' ? (
+                                            <>
+                                                <TooltipHint label={t('planning_go_current_week_hint')}>
+                                                    <button type="button" onClick={goThisWeek} className={SUBTOOLBAR_TEXT_BUTTON_CLASS}>
+                                                        {t('today')}
                                                     </button>
                                                 </TooltipHint>
-                                                <p className="flex h-10 min-w-[10rem] max-w-[16rem] items-center justify-center px-1 text-center text-sm font-bold tabular-nums text-gray-900 dark:text-white sm:text-base">
-                                                    {weekLabel}
-                                                </p>
-                                                <TooltipHint label={t('planning_week_nav_next')}>
-                                                    <button type="button" onClick={goNextWeek} className={SUBTOOLBAR_ICON_BUTTON_CLASS} aria-label={t('planning_week_nav_next')}>
-                                                        <ChevronRightIcon className="h-5 w-5" />
+                                                <div className="flex items-center gap-0.5 sm:gap-1">
+                                                    <TooltipHint label={t('planning_week_nav_prev')}>
+                                                        <button type="button" onClick={goPrevWeek} className={SUBTOOLBAR_ICON_BUTTON_CLASS} aria-label={t('planning_week_nav_prev')}>
+                                                            <ChevronLeftIcon className="h-5 w-5" />
+                                                        </button>
+                                                    </TooltipHint>
+                                                    <p className="flex h-10 min-w-[10rem] max-w-[16rem] items-center justify-center px-1 text-center text-sm font-bold tabular-nums text-gray-900 dark:text-white sm:text-base">
+                                                        {weekLabel}
+                                                    </p>
+                                                    <TooltipHint label={t('planning_week_nav_next')}>
+                                                        <button type="button" onClick={goNextWeek} className={SUBTOOLBAR_ICON_BUTTON_CLASS} aria-label={t('planning_week_nav_next')}>
+                                                            <ChevronRightIcon className="h-5 w-5" />
+                                                        </button>
+                                                    </TooltipHint>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <TooltipHint label={t('planning_go_current_month_hint')}>
+                                                    <button type="button" onClick={goThisMonth} className={SUBTOOLBAR_TEXT_BUTTON_CLASS}>
+                                                        {t('today')}
                                                     </button>
                                                 </TooltipHint>
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <TooltipHint label={t('planning_go_current_month_hint')}>
-                                                <button type="button" onClick={goThisMonth} className={SUBTOOLBAR_TEXT_BUTTON_CLASS}>
-                                                    {t('today')}
-                                                </button>
-                                            </TooltipHint>
-                                            <div className="flex items-center gap-0.5 sm:gap-1">
-                                                <TooltipHint label={t('planning_month_nav_prev')}>
-                                                    <button type="button" onClick={goPrevMonth} className={SUBTOOLBAR_ICON_BUTTON_CLASS} aria-label={t('planning_month_nav_prev')}>
-                                                        <ChevronLeftIcon className="h-5 w-5" />
-                                                    </button>
-                                                </TooltipHint>
-                                                <p className="flex h-10 min-w-[10rem] max-w-[16rem] items-center justify-center px-1 text-center text-base font-bold tabular-nums text-gray-900 dark:text-white sm:text-lg">
-                                                    {getMonthName(currentMonthAnchor, language as Language)}
-                                                </p>
-                                                <TooltipHint label={t('planning_month_nav_next')}>
-                                                    <button type="button" onClick={goNextMonth} className={SUBTOOLBAR_ICON_BUTTON_CLASS} aria-label={t('planning_month_nav_next')}>
-                                                        <ChevronRightIcon className="h-5 w-5" />
-                                                    </button>
-                                                </TooltipHint>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
+                                                <div className="flex items-center gap-0.5 sm:gap-1">
+                                                    <TooltipHint label={t('planning_month_nav_prev')}>
+                                                        <button type="button" onClick={goPrevMonth} className={SUBTOOLBAR_ICON_BUTTON_CLASS} aria-label={t('planning_month_nav_prev')}>
+                                                            <ChevronLeftIcon className="h-5 w-5" />
+                                                        </button>
+                                                    </TooltipHint>
+                                                    <p className="flex h-10 min-w-[10rem] max-w-[16rem] items-center justify-center px-1 text-center text-base font-bold tabular-nums text-gray-900 dark:text-white sm:text-lg">
+                                                        {getMonthName(currentMonthAnchor, language as Language)}
+                                                    </p>
+                                                    <TooltipHint label={t('planning_month_nav_next')}>
+                                                        <button type="button" onClick={goNextMonth} className={SUBTOOLBAR_ICON_BUTTON_CLASS} aria-label={t('planning_month_nav_next')}>
+                                                            <ChevronRightIcon className="h-5 w-5" />
+                                                        </button>
+                                                    </TooltipHint>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
@@ -934,7 +905,13 @@ const PlanningPage: React.FC = () => {
                                                 <div className="text-[10px] uppercase tracking-wider text-indigo-600 dark:text-indigo-400 font-medium">
                                                     {t(`day_${DAY_KEYS[(d.getDay() + 6) % 7]}`)}
                                                 </div>
-                                                <div className="text-2xl font-extrabold text-indigo-900 dark:text-indigo-100 mt-0.5">{d.getDate()}</div>
+                                                <div
+                                                    className={`mt-0.5 text-2xl font-extrabold text-indigo-900 dark:text-indigo-100 ${
+                                                        isPlanningToday(d) ? PLANNING_TODAY_DAY_NUMBER_CLASS : ''
+                                                    }`}
+                                                >
+                                                    {d.getDate()}
+                                                </div>
                                             </div>
                                         ))}
                                         </div>
@@ -1009,15 +986,12 @@ const PlanningPage: React.FC = () => {
                                                             {cellPosts.length > 0 ? (
                                                                 <div className="flex flex-col gap-1 flex-1">
                                                                     {cellPosts.map((item) => {
-                                                                        const itemClient = clientById.get(client.id);
-                                                                        const itemMilestones = getTaskOperationalMilestones(item, itemClient);
                                                                         if (isForecastTask(item)) {
                                                                             return (
                                                                                 <TooltipHint key={item.id} label={t('planning_forecast_type')}>
                                                                                     <div className="text-xs px-2 py-1.5 rounded-r border-l-2 border-dashed border-slate-400 bg-slate-50/80 dark:bg-slate-800/50 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300">
                                                                                         <div className="font-medium truncate text-[11px]">{t('planning_forecast')}</div>
                                                                                         <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">{t('planning_forecast_date')}</div>
-                                                                                        <OperationalMilestonesCompactLine milestones={itemMilestones} t={t} />
                                                                                     </div>
                                                                                 </TooltipHint>
                                                                             );
@@ -1037,7 +1011,6 @@ const PlanningPage: React.FC = () => {
                                                                                 >
                                                                                     <div className="font-medium truncate text-[11px]">{item.title || '—'}</div>
                                                                                     <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{t(item.postType || '') || item.postType || ''}</div>
-                                                                                    <OperationalMilestonesCompactLine milestones={itemMilestones} t={t} />
                                                                                 </div>
                                                                             </TooltipHint>
                                                                         );
@@ -1118,14 +1091,6 @@ const PlanningPage: React.FC = () => {
                                             <span className="inline-block h-2 w-2 rounded-full border border-dashed border-slate-400 bg-slate-100 dark:border-slate-500 dark:bg-slate-700" aria-hidden />
                                             {t('planning_month_cell_legend_forecasts')}
                                         </span>
-                                        <span className="inline-flex items-center gap-1">
-                                            <span className="inline-flex gap-0.5" aria-hidden>
-                                                <span className="inline-block h-2 w-2 rounded-full bg-amber-500" />
-                                                <span className="inline-block h-2 w-2 rounded-full bg-orange-500" />
-                                                <span className="inline-block h-2 w-2 rounded-full bg-violet-500" />
-                                            </span>
-                                            {t('planning_month_cell_legend_milestones')}
-                                        </span>
                                     </div>
                                     <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
                                         {(['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const).map((k) => (
@@ -1138,13 +1103,8 @@ const PlanningPage: React.FC = () => {
                                             const dayStats = planningMonthDayStats.get(ds);
                                             const planned = dayStats?.planned ?? 0;
                                             const forecast = dayStats?.forecast ?? 0;
-                                            const milestoneCounts = planningMonthMilestoneStats.get(ds);
-                                            const hasMilestones =
-                                                milestoneCounts != null &&
-                                                (milestoneCounts.production > 0 ||
-                                                    milestoneCounts.approval > 0 ||
-                                                    milestoneCounts.scheduling > 0);
-                                            const hasItems = planned > 0 || forecast > 0 || hasMilestones;
+                                            const hasItems = planned > 0 || forecast > 0;
+                                            const isToday = isCurrentMonth && isPlanningToday(date);
                                             return (
                                                 <button
                                                     key={idx}
@@ -1158,37 +1118,40 @@ const PlanningPage: React.FC = () => {
                                                     }}
                                                     className={`flex min-h-[4.25rem] flex-col items-center justify-center rounded-lg border p-1 text-center transition-colors ${
                                                         isCurrentMonth
-                                                            ? 'border-gray-200 bg-gray-50/90 hover:border-indigo-300 hover:bg-indigo-50/80 dark:border-gray-600 dark:bg-gray-800/60 dark:hover:border-indigo-500'
+                                                            ? 'border-gray-200 bg-gray-50/90 hover:border-indigo-300 dark:border-gray-600 dark:bg-gray-800/60 dark:hover:border-indigo-500'
                                                             : 'border-transparent bg-gray-50/20 text-gray-400 dark:bg-gray-900/20'
                                                     }`}
                                                 >
-                                                    <span className={`text-sm font-semibold ${isCurrentMonth ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}>{date.getDate()}</span>
+                                                    <span
+                                                        className={`text-sm font-semibold ${
+                                                            isToday
+                                                                ? PLANNING_TODAY_DAY_NUMBER_CLASS
+                                                                : isCurrentMonth
+                                                                  ? 'text-gray-900 dark:text-white'
+                                                                  : 'text-gray-400'
+                                                        }`}
+                                                    >
+                                                        {date.getDate()}
+                                                    </span>
                                                     {isCurrentMonth && hasItems ? (
-                                                        <div className="mt-0.5 flex flex-col items-center gap-0.5">
-                                                            {(planned > 0 || forecast > 0) && (
-                                                                <div className="flex flex-wrap items-center justify-center gap-1">
-                                                                    {planned > 0 ? (
-                                                                        <span
-                                                                            className="inline-flex items-center gap-0.5 rounded bg-indigo-100 px-1 py-px text-[9px] font-bold leading-none text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200"
-                                                                            title={t('planning_month_cell_legend_posts')}
-                                                                        >
-                                                                            <span className="h-1 w-1 rounded-full bg-indigo-600" aria-hidden />
-                                                                            {planned}
-                                                                        </span>
-                                                                    ) : null}
-                                                                    {forecast > 0 ? (
-                                                                        <span
-                                                                            className="inline-flex items-center gap-0.5 rounded border border-dashed border-slate-300 bg-slate-100/90 px-1 py-px text-[9px] font-bold leading-none text-slate-600 dark:border-slate-500 dark:bg-slate-800/80 dark:text-slate-300"
-                                                                            title={t('planning_month_cell_legend_forecasts')}
-                                                                        >
-                                                                            <span className="h-1 w-1 rounded-full border border-slate-400" aria-hidden />
-                                                                            {forecast}
-                                                                        </span>
-                                                                    ) : null}
-                                                                </div>
-                                                            )}
-                                                            {hasMilestones && milestoneCounts ? (
-                                                                <OperationalMilestoneDots counts={milestoneCounts} t={t} />
+                                                        <div className="mt-0.5 flex flex-wrap items-center justify-center gap-1">
+                                                            {planned > 0 ? (
+                                                                <span
+                                                                    className="inline-flex items-center gap-0.5 rounded bg-indigo-100 px-1 py-px text-[9px] font-bold leading-none text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-200"
+                                                                    title={t('planning_month_cell_legend_posts')}
+                                                                >
+                                                                    <span className="h-1 w-1 rounded-full bg-indigo-600" aria-hidden />
+                                                                    {planned}
+                                                                </span>
+                                                            ) : null}
+                                                            {forecast > 0 ? (
+                                                                <span
+                                                                    className="inline-flex items-center gap-0.5 rounded border border-dashed border-slate-300 bg-slate-100/90 px-1 py-px text-[9px] font-bold leading-none text-slate-600 dark:border-slate-500 dark:bg-slate-800/80 dark:text-slate-300"
+                                                                    title={t('planning_month_cell_legend_forecasts')}
+                                                                >
+                                                                    <span className="h-1 w-1 rounded-full border border-slate-400" aria-hidden />
+                                                                    {forecast}
+                                                                </span>
                                                             ) : null}
                                                         </div>
                                                     ) : null}

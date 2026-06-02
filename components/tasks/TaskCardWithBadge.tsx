@@ -10,8 +10,6 @@ import {
     agendaDifferentiatedShellWrapsBadge,
     resolveAgendaCardKind,
 } from '../../lib/agendaViewMode';
-import { getTaskOperationalMilestones } from '../../lib/operationalMilestones';
-import { OperationalMilestonesCompactLine } from '../OperationalMilestonesPanel';
 import TaskCard from './TaskCard';
 import { AlertTriangleIcon, AlarmClockIcon, LayoutGridIcon, CheckSquareIcon } from '../icons';
 import TooltipHint from '../TooltipHint';
@@ -37,7 +35,7 @@ const TaskCardWithBadge: React.FC<{
     onDuplicate?: (taskId: string) => void;
     onInlineTitleSave?: (taskId: string, title: string) => void | Promise<void>;
 }> = ({ task, onClick, context, compact = false, variant: variantProp = 'default', badgeSize = 'default', onMigrate, ignoredTasks, onActionComplete, onStatusChange, sourcePage, onNavigateToPage, confirmTaskStatusChange, confirmPostStatusChange, onOpenStatusHistory, onDelete, onDuplicate, onInlineTitleSave }) => {
-    const { t, workflows, clientWorkflowId, generalWorkflowId, clients } = context;
+    const { t, workflows, clientWorkflowId, generalWorkflowId } = context;
     const applyAgendaCardStyle = sourcePage === 'agenda';
     const forecastPost = !task.isGeneral && isPostForecast(task);
     const agendaCardKind = resolveAgendaCardKind(task.isGeneral, forecastPost);
@@ -91,18 +89,6 @@ const TaskCardWithBadge: React.FC<{
     const canDragBadge =
         sourcePage === 'agenda' &&
         (task.isGeneral ? context.canEditModule('tasks') : context.canEditModule('posts'));
-
-    const operationalMilestones =
-        sourcePage === 'agenda' && !task.isGeneral && task.clientId
-            ? getTaskOperationalMilestones(task, clients.find((c) => c.id === task.clientId))
-            : [];
-
-    const milestoneLine =
-        operationalMilestones.length > 0 ? (
-            <div className="px-2 pb-1">
-                <OperationalMilestonesCompactLine milestones={operationalMilestones} t={t} />
-            </div>
-        ) : null;
 
     const kindBadge = showKindBadge ? (
         <div
@@ -183,7 +169,6 @@ const TaskCardWithBadge: React.FC<{
                         ) : null}
                         {taskCardNode}
                     </div>
-                    {milestoneLine}
                 </div>
             </div>
         );
@@ -193,7 +178,6 @@ const TaskCardWithBadge: React.FC<{
         <div className="flex flex-col">
             {kindBadge}
             <div className={showKindBadge ? '-mt-px relative' : 'relative'}>{taskCardNode}</div>
-            {milestoneLine}
         </div>
     );
 };
