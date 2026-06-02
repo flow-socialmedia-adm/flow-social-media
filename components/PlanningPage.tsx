@@ -728,6 +728,14 @@ const PlanningPage: React.FC = () => {
         [selectedClient, firstStatusId, clientWorkflowId, forecastGenerating, t, setTasks, notify]
     );
 
+    const clientFilterOptions = useMemo(
+        () => [{ value: 'all', label: t('planning_all_clients') }, ...clients.map((c) => ({ value: c.id, label: c.name }))],
+        [clients, t],
+    );
+
+    const clientFilterSelectClass =
+        'h-10 min-h-[2.5rem] min-w-[200px] rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-800 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100';
+
     return (
         <div className="flex min-h-full min-w-0 w-full flex-1 flex-col">
             {/* Mesma hierarquia do header de Tarefas; `justify-end` só aqui: ancoragem na base da faixa (min-h > conteúdo). */}
@@ -813,17 +821,37 @@ const PlanningPage: React.FC = () => {
                         </div>
                     ) : (
                         <>
-                            <div className="flex flex-col gap-3">
-                                {clientFilter === 'all' ? (
-                                    <p className="rounded-lg border border-amber-200/80 bg-amber-50/70 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/30 dark:text-amber-100">
-                                        {t('planning_pick_client_hint')}
+                            {clientFilter === 'all' ? (
+                                <div className="rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-5 py-5 shadow-sm dark:border-indigo-700/60 dark:from-indigo-950/40 dark:via-gray-900 dark:to-violet-950/30">
+                                    <h2 className="text-lg font-bold text-indigo-950 dark:text-indigo-100">
+                                        {t('planning_entry_title')}
+                                    </h2>
+                                    <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-indigo-900/80 dark:text-indigo-200/90">
+                                        {t('planning_entry_body')}
                                     </p>
-                                ) : null}
+                                    <div className="mt-4">
+                                        <FilterDropdown
+                                            layout="inline"
+                                            label={t('client')}
+                                            name="clientFilter"
+                                            options={clientFilterOptions}
+                                            value={clientFilter}
+                                            onChange={(_, value) => setClientFilter(value)}
+                                            disabled={clients.length === 0}
+                                            selectClassName={clientFilterSelectClass}
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                    {t('planning_entry_active', { name: selectedClient?.name ?? t('planning_client_unknown') })}
+                                </p>
+                            )}
+
+                            <div className="flex flex-col gap-3">
                                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-gray-700 dark:text-gray-300">
                                     {scheduleKpi.mode === 'client' ? (
                                         <>
-                                            <span className="font-semibold text-gray-900 dark:text-white">{selectedClient?.name}</span>
-                                            <span className="text-gray-500 dark:text-gray-400">·</span>
                                             <span>{t('planning_kpi_planned', { n: scheduleKpi.planned })}</span>
                                             <span className="text-gray-500 dark:text-gray-400">·</span>
                                             <span>
@@ -846,12 +874,22 @@ const PlanningPage: React.FC = () => {
                                         </>
                                     ) : (
                                         <>
-                                            <span>{t('planning_kpi_clients_planned', { n: scheduleKpi.clientsWithPlanning })}</span>
+                                            <span>
+                                                {scheduleKpi.clientsWithPlanning === 1
+                                                    ? t('planning_kpi_clients_started_one')
+                                                    : t('planning_kpi_clients_started_other', {
+                                                          n: scheduleKpi.clientsWithPlanning,
+                                                      })}
+                                            </span>
                                             {scheduleKpi.clientsWithGap > 0 ? (
                                                 <>
                                                     <span className="text-gray-500 dark:text-gray-400">·</span>
                                                     <span className="font-medium text-amber-700 dark:text-amber-300">
-                                                        {t('planning_kpi_clients_gap', { n: scheduleKpi.clientsWithGap })}
+                                                        {scheduleKpi.clientsWithGap === 1
+                                                            ? t('planning_kpi_clients_gap_one')
+                                                            : t('planning_kpi_clients_gap_other', {
+                                                                  n: scheduleKpi.clientsWithGap,
+                                                              })}
                                                     </span>
                                                 </>
                                             ) : null}
@@ -870,16 +908,18 @@ const PlanningPage: React.FC = () => {
 
                             <div className="border-t border-gray-200/80 pt-3 dark:border-gray-700/80">
                                 <div className={`${CONTENT_PAGE_SUBTOOLBAR_STRIP} mt-0.5 items-center gap-2`}>
-                                    <FilterDropdown
-                                        layout="inline"
-                                        label={t('client')}
-                                        name="clientFilter"
-                                        options={[{ value: 'all', label: t('planning_all_clients') }, ...clients.map((c) => ({ value: c.id, label: c.name }))]}
-                                        value={clientFilter}
-                                        onChange={(_, value) => setClientFilter(value)}
-                                        disabled={clients.length === 0}
-                                        selectClassName="h-10 min-h-[2.5rem] min-w-[160px] rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-800 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100"
-                                    />
+                                    {clientFilter !== 'all' ? (
+                                        <FilterDropdown
+                                            layout="inline"
+                                            label={t('client')}
+                                            name="clientFilter"
+                                            options={clientFilterOptions}
+                                            value={clientFilter}
+                                            onChange={(_, value) => setClientFilter(value)}
+                                            disabled={clients.length === 0}
+                                            selectClassName={clientFilterSelectClass}
+                                        />
+                                    ) : null}
                                     <TooltipHint label={t('planning_view_monthly_hint')}>
                                         <button
                                             type="button"

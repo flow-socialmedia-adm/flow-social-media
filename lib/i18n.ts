@@ -88,6 +88,21 @@ export const translations: Translations = {
     "en": "Build each client's publication schedule here.",
     "es": "Arma aquí el cronograma de publicaciones por cliente.",
   },
+  "planning_entry_title": {
+    "pt": "Planeje um cliente por vez",
+    "en": "Plan one client at a time",
+    "es": "Planifica un cliente a la vez",
+  },
+  "planning_entry_body": {
+    "pt": "Escolha um cliente para montar o cronograma de publicações do mês.",
+    "en": "Select a client to build this month's publication schedule.",
+    "es": "Elige un cliente para armar el cronograma de publicaciones del mes.",
+  },
+  "planning_entry_active": {
+    "pt": "Planejando: {name}",
+    "en": "Planning: {name}",
+    "es": "Planificando: {name}",
+  },
   "planning_pick_client_hint": {
     "pt": "Escolha um cliente para montar o cronograma de publicações.",
     "en": "Select a client to build the publication schedule.",
@@ -96,6 +111,26 @@ export const translations: Translations = {
   "planning_kpi_planned": { "pt": "{n} planejados", "en": "{n} planned", "es": "{n} planificados" },
   "planning_kpi_goal": { "pt": "meta: {n}", "en": "goal: {n}", "es": "meta: {n}" },
   "planning_kpi_missing": { "pt": "faltam: {n}", "en": "missing: {n}", "es": "faltan: {n}" },
+  "planning_kpi_clients_started_one": {
+    "pt": "1 cliente com cronograma iniciado",
+    "en": "1 client with a started schedule",
+    "es": "1 cliente con cronograma iniciado",
+  },
+  "planning_kpi_clients_started_other": {
+    "pt": "{n} clientes com cronograma iniciado",
+    "en": "{n} clients with a started schedule",
+    "es": "{n} clientes con cronograma iniciado",
+  },
+  "planning_kpi_clients_gap_one": {
+    "pt": "1 cliente com lacunas no planejamento",
+    "en": "1 client with planning gaps",
+    "es": "1 cliente con brechas en la planificación",
+  },
+  "planning_kpi_clients_gap_other": {
+    "pt": "{n} clientes com lacunas no planejamento",
+    "en": "{n} clients with planning gaps",
+    "es": "{n} clientes con brechas en la planificación",
+  },
   "planning_kpi_clients_planned": {
     "pt": "{n} clientes planejados",
     "en": "{n} clients with schedule",
@@ -107,14 +142,14 @@ export const translations: Translations = {
     "es": "{n} clientes con brecha",
   },
   "planning_intel_alerts_count": {
-    "pt": "{n} alerta(s) de planejamento",
-    "en": "{n} planning alert(s)",
-    "es": "{n} alerta(s) de planificación",
+    "pt": "{n} pontos de atenção no planejamento",
+    "en": "{n} planning attention points",
+    "es": "{n} puntos de atención en la planificación",
   },
   "planning_intel_no_alerts": {
-    "pt": "Nenhum alerta de planejamento",
-    "en": "No planning alerts",
-    "es": "Ninguna alerta de planificación",
+    "pt": "Nenhum ponto de atenção no planejamento",
+    "en": "No planning attention points",
+    "es": "Ningún punto de atención en la planificación",
   },
   "planning_intel_view_details": { "pt": "Ver detalhes", "en": "View details", "es": "Ver detalles" },
   "planning_intel_hide_details": { "pt": "Ocultar", "en": "Hide", "es": "Ocultar" },
