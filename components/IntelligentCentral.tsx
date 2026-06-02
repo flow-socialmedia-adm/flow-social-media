@@ -12,6 +12,8 @@ type IntelligentCentralProps = {
 	emptyMessageKey?: string;
 	/** Recolhido por padrão — não compete visualmente com o calendário. */
 	variant?: 'default' | 'compact';
+	/** Chave i18n para resumo compacto quando há itens (recebe { n }). */
+	compactCountKey?: string;
 };
 
 const IntelligentCentral: React.FC<IntelligentCentralProps> = ({
@@ -22,6 +24,7 @@ const IntelligentCentral: React.FC<IntelligentCentralProps> = ({
 	onAction,
 	emptyMessageKey = 'intel_central_balanced',
 	variant = 'default',
+	compactCountKey,
 }) => {
 	const [index, setIndex] = useState(0);
 	const [expanded, setExpanded] = useState(variant !== 'compact');
@@ -48,16 +51,17 @@ const IntelligentCentral: React.FC<IntelligentCentralProps> = ({
 			? 'rounded-lg border border-gray-200/80 bg-gray-50/60 dark:border-gray-700/80 dark:bg-gray-800/40'
 			: 'min-h-[124px] min-w-[240px] max-w-[360px] flex-1 rounded-xl border border-indigo-100 bg-gradient-to-br from-purple-50 to-indigo-50 shadow-sm dark:border-indigo-800/50 dark:from-purple-900/20 dark:to-indigo-900/20';
 
+	const compactSummary =
+		items.length > 0
+			? t(compactCountKey ?? 'planning_intel_alerts_count', { n: items.length })
+			: t('planning_intel_no_alerts');
+
 	if (variant === 'compact' && !expanded) {
 		return (
 			<div className={`flex items-center justify-between gap-3 px-3 py-2 ${shellClass} ${className}`}>
 				<span className="flex min-w-0 items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400">
 					<ZapIcon className="h-3.5 w-3.5 shrink-0 text-amber-500 dark:text-amber-400" />
-					<span className="truncate">
-						{items.length > 0
-							? t('planning_intel_alerts_count', { n: items.length })
-							: t('planning_intel_no_alerts')}
-					</span>
+					<span className="truncate">{compactSummary}</span>
 				</span>
 				{items.length > 0 ? (
 					<button

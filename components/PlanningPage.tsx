@@ -140,6 +140,7 @@ const PlanningPage: React.FC = () => {
     const [forecastPopoverOpen, setForecastPopoverOpen] = useState(false);
     const [forecastGenerating, setForecastGenerating] = useState(false);
     const forecastPopoverRef = useRef<HTMLDivElement>(null);
+    const isPlanningLocked = clientFilter === 'all';
     const [planningView, setPlanningView] = useState<'weekly' | 'monthly'>('monthly');
     const [currentMonthAnchor, setCurrentMonthAnchor] = useState(() => {
         const d = new Date();
@@ -265,6 +266,13 @@ const PlanningPage: React.FC = () => {
         return map;
     }, [clients]);
     const [monthlyDayDetail, setMonthlyDayDetail] = useState<{ date: Date; items: Task[] } | null>(null);
+
+    useEffect(() => {
+        if (clientFilter === 'all') {
+            setMonthlyDayDetail(null);
+            setForecastPopoverOpen(false);
+        }
+    }, [clientFilter]);
 
     const { canGenerateForecasts, generateForecastsTooltip } = useMemo(() => {
         if (clientFilter === 'all') {
@@ -736,6 +744,28 @@ const PlanningPage: React.FC = () => {
     const clientFilterSelectClass =
         'h-10 min-h-[2.5rem] min-w-[200px] rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-800 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100';
 
+    const intelCompactCountKey = useMemo(() => {
+        if (planningIntelligenceItems.length === 0) return undefined;
+        if (clientFilter === 'all') {
+            return planningIntelligenceItems.length === 1
+                ? 'planning_intel_clients_need_review_one'
+                : 'planning_intel_clients_need_review_other';
+        }
+        return planningIntelligenceItems.length === 1
+            ? 'planning_intel_adjustments_one'
+            : 'planning_intel_adjustments_other';
+    }, [clientFilter, planningIntelligenceItems.length]);
+
+    const planningLockedOverlaySteps = useMemo(
+        () => [
+            'planning_locked_overlay_step_forecasts',
+            'planning_locked_overlay_step_schedule',
+            'planning_locked_overlay_step_dates',
+            'planning_locked_overlay_step_content',
+        ],
+        [],
+    );
+
     return (
         <div className="flex min-h-full min-w-0 w-full flex-1 flex-col">
             {/* Mesma hierarquia do header de Tarefas; `justify-end` só aqui: ancoragem na base da faixa (min-h > conteúdo). */}
@@ -744,60 +774,12 @@ const PlanningPage: React.FC = () => {
                 subtitle={t('editorial_calendar_subtitle')}
                 actions={(
                     <>
-                            {/* Botão Gerar previsões - popover com opções de período */}
-                            <div ref={forecastPopoverRef} className="relative inline-flex">
-                                <TooltipHint
-                                    label={
-                                        !canEditPlanning
-                                            ? t('tooltip_no_edit_permission')
-                                            : generateForecastsTooltip
-                                              ? t(generateForecastsTooltip)
-                                              : t('planning_generate_forecasts')
-                                    }
-                                >
-                                    <span
-                                        className={`inline-flex ${!canGenerateForecasts || !canEditPlanning ? 'cursor-not-allowed' : ''}`}
-                                    >
-                                        <button
-                                            type="button"
-                                            onClick={() => canGenerateForecasts && canEditPlanning && !forecastGenerating && setForecastPopoverOpen((o) => !o)}
-                                            disabled={!canGenerateForecasts || !canEditPlanning || forecastGenerating}
-                                            aria-label={t('planning_generate_forecasts')}
-                                            aria-expanded={forecastPopoverOpen}
-                                            aria-haspopup="true"
-                                            className={`h-10 pl-4 pr-2 rounded-lg border border-white/30 bg-white/20 text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-indigo-500 transition-all inline-flex items-center gap-1 ${!canGenerateForecasts || !canEditPlanning ? 'opacity-50 cursor-not-allowed pointer-events-none hover:bg-white/20' : 'hover:bg-white/30'}`}
-                                        >
-                                            {t('planning_generate_forecasts')}
-                                            <ChevronDownIcon className={`w-4 h-4 transition-transform ${forecastPopoverOpen ? 'rotate-180' : ''}`} />
-                                        </button>
-                                    </span>
-                                </TooltipHint>
-                                {forecastPopoverOpen && canGenerateForecasts && canEditPlanning && (
-                                    <div
-                                        className="absolute top-full right-0 mt-1 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg z-50 min-w-[180px]"
-                                        role="menu"
-                                    >
-                                        {(['1m', '3m', '6m', '1y'] as ForecastPeriodKey[]).map((p) => (
-                                            <button
-                                                key={p}
-                                                type="button"
-                                                role="menuitem"
-                                                onClick={() => handleGenerateForecasts(p)}
-                                                disabled={forecastGenerating}
-                                                className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 focus:bg-indigo-50 dark:focus:bg-indigo-900/30 focus:outline-none disabled:opacity-50"
-                                            >
-                                                {t(`planning_forecast_period_${p}`)}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
                             {canEditPlanning && (
                             <TooltipHint label={t('planning_add_post_slot')}>
                                 <button
                                     type="button"
                                     onClick={handleHeaderAdd}
-                                    disabled={filteredClients.length === 0}
+                                    disabled={filteredClients.length === 0 || isPlanningLocked}
                                     aria-label={t('adicionar')}
                                     className={HEADER_GRADIENT_PLUS_CLASS}
                                 >
@@ -821,32 +803,91 @@ const PlanningPage: React.FC = () => {
                         </div>
                     ) : (
                         <>
-                            {clientFilter === 'all' ? (
-                                <div className="rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-5 py-5 shadow-sm dark:border-indigo-700/60 dark:from-indigo-950/40 dark:via-gray-900 dark:to-violet-950/30">
-                                    <h2 className="text-lg font-bold text-indigo-950 dark:text-indigo-100">
-                                        {t('planning_entry_title')}
-                                    </h2>
+                            <div
+                                className="rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-5 py-5 shadow-sm dark:border-indigo-700/60 dark:from-indigo-950/40 dark:via-gray-900 dark:to-violet-950/30"
+                                data-planning-wizard-step="client-entry"
+                            >
+                                <h2 className="text-lg font-bold text-indigo-950 dark:text-indigo-100">
+                                    {isPlanningLocked ? t('planning_entry_title') : t('planning_entry_title_active')}
+                                </h2>
+                                {isPlanningLocked ? (
                                     <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-indigo-900/80 dark:text-indigo-200/90">
                                         {t('planning_entry_body')}
                                     </p>
-                                    <div className="mt-4">
-                                        <FilterDropdown
-                                            layout="inline"
-                                            label={t('client')}
-                                            name="clientFilter"
-                                            options={clientFilterOptions}
-                                            value={clientFilter}
-                                            onChange={(_, value) => setClientFilter(value)}
-                                            disabled={clients.length === 0}
-                                            selectClassName={clientFilterSelectClass}
-                                        />
-                                    </div>
+                                ) : (
+                                    <p className="mt-1.5 text-base font-semibold text-indigo-950 dark:text-indigo-100">
+                                        {selectedClient?.name ?? t('planning_client_unknown')}
+                                    </p>
+                                )}
+                                <div className="mt-4 flex flex-wrap items-end gap-3">
+                                    <FilterDropdown
+                                        layout="inline"
+                                        label={t('client')}
+                                        name="clientFilter"
+                                        options={clientFilterOptions}
+                                        value={clientFilter}
+                                        onChange={(_, value) => setClientFilter(value)}
+                                        disabled={clients.length === 0}
+                                        selectClassName={clientFilterSelectClass}
+                                    />
+                                    {!isPlanningLocked ? (
+                                        <div ref={forecastPopoverRef} className="relative inline-flex shrink-0">
+                                            <TooltipHint
+                                                label={
+                                                    !canEditPlanning
+                                                        ? t('tooltip_no_edit_permission')
+                                                        : generateForecastsTooltip
+                                                          ? t(generateForecastsTooltip)
+                                                          : t('planning_generate_forecasts')
+                                                }
+                                            >
+                                                <span
+                                                    className={`inline-flex ${!canGenerateForecasts || !canEditPlanning ? 'cursor-not-allowed' : ''}`}
+                                                >
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            canGenerateForecasts &&
+                                                            canEditPlanning &&
+                                                            !forecastGenerating &&
+                                                            setForecastPopoverOpen((o) => !o)
+                                                        }
+                                                        disabled={!canGenerateForecasts || !canEditPlanning || forecastGenerating}
+                                                        aria-label={t('planning_generate_forecasts')}
+                                                        aria-expanded={forecastPopoverOpen}
+                                                        aria-haspopup="true"
+                                                        className={`inline-flex h-10 items-center gap-1 rounded-lg border border-indigo-200 bg-white px-4 pr-2 text-sm font-medium text-indigo-700 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:border-indigo-700 dark:bg-gray-800 dark:text-indigo-300 dark:focus:ring-offset-gray-900 ${!canGenerateForecasts || !canEditPlanning ? 'cursor-not-allowed opacity-50 pointer-events-none' : 'hover:border-indigo-300 hover:bg-indigo-50 dark:hover:border-indigo-600 dark:hover:bg-indigo-950/40'}`}
+                                                    >
+                                                        {t('planning_generate_forecasts')}
+                                                        <ChevronDownIcon
+                                                            className={`h-4 w-4 transition-transform ${forecastPopoverOpen ? 'rotate-180' : ''}`}
+                                                        />
+                                                    </button>
+                                                </span>
+                                            </TooltipHint>
+                                            {forecastPopoverOpen && canGenerateForecasts && canEditPlanning && (
+                                                <div
+                                                    className="absolute top-full left-0 z-50 mt-1 min-w-[180px] rounded-lg border border-gray-200 bg-white py-1.5 shadow-lg dark:border-gray-600 dark:bg-gray-800"
+                                                    role="menu"
+                                                >
+                                                    {(['1m', '3m', '6m', '1y'] as ForecastPeriodKey[]).map((p) => (
+                                                        <button
+                                                            key={p}
+                                                            type="button"
+                                                            role="menuitem"
+                                                            onClick={() => handleGenerateForecasts(p)}
+                                                            disabled={forecastGenerating}
+                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none disabled:opacity-50 dark:text-gray-200 dark:hover:bg-indigo-900/30 dark:focus:bg-indigo-900/30"
+                                                        >
+                                                            {t(`planning_forecast_period_${p}`)}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : null}
                                 </div>
-                            ) : (
-                                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                    {t('planning_entry_active', { name: selectedClient?.name ?? t('planning_client_unknown') })}
-                                </p>
-                            )}
+                            </div>
 
                             <div className="flex flex-col gap-3">
                                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-gray-700 dark:text-gray-300">
@@ -873,27 +914,13 @@ const PlanningPage: React.FC = () => {
                                             </span>
                                         </>
                                     ) : (
-                                        <>
-                                            <span>
-                                                {scheduleKpi.clientsWithPlanning === 1
-                                                    ? t('planning_kpi_clients_started_one')
-                                                    : t('planning_kpi_clients_started_other', {
-                                                          n: scheduleKpi.clientsWithPlanning,
-                                                      })}
-                                            </span>
-                                            {scheduleKpi.clientsWithGap > 0 ? (
-                                                <>
-                                                    <span className="text-gray-500 dark:text-gray-400">·</span>
-                                                    <span className="font-medium text-amber-700 dark:text-amber-300">
-                                                        {scheduleKpi.clientsWithGap === 1
-                                                            ? t('planning_kpi_clients_gap_one')
-                                                            : t('planning_kpi_clients_gap_other', {
-                                                                  n: scheduleKpi.clientsWithGap,
-                                                              })}
-                                                    </span>
-                                                </>
-                                            ) : null}
-                                        </>
+                                        <span>
+                                            {scheduleKpi.clientsWithPlanning === 1
+                                                ? t('planning_kpi_clients_started_one')
+                                                : t('planning_kpi_clients_started_other', {
+                                                      n: scheduleKpi.clientsWithPlanning,
+                                                  })}
+                                        </span>
                                     )}
                                 </div>
                                 <IntelligentCentral
@@ -903,23 +930,17 @@ const PlanningPage: React.FC = () => {
                                     t={t}
                                     onAction={handlePlanningIntelAction}
                                     emptyMessageKey="planning_balanced"
+                                    compactCountKey={intelCompactCountKey}
                                 />
                             </div>
 
+                            <div className="relative min-h-[24rem]">
+                                <div
+                                    className={isPlanningLocked ? 'pointer-events-none select-none opacity-45' : undefined}
+                                    aria-hidden={isPlanningLocked}
+                                >
                             <div className="border-t border-gray-200/80 pt-3 dark:border-gray-700/80">
                                 <div className={`${CONTENT_PAGE_SUBTOOLBAR_STRIP} mt-0.5 items-center gap-2`}>
-                                    {clientFilter !== 'all' ? (
-                                        <FilterDropdown
-                                            layout="inline"
-                                            label={t('client')}
-                                            name="clientFilter"
-                                            options={clientFilterOptions}
-                                            value={clientFilter}
-                                            onChange={(_, value) => setClientFilter(value)}
-                                            disabled={clients.length === 0}
-                                            selectClassName={clientFilterSelectClass}
-                                        />
-                                    ) : null}
                                     <TooltipHint label={t('planning_view_monthly_hint')}>
                                         <button
                                             type="button"
@@ -1289,7 +1310,31 @@ const PlanningPage: React.FC = () => {
                                     <p className="mt-4 text-xs leading-relaxed text-gray-500 dark:text-gray-400">{t('planning_month_heatmap_footer')}</p>
                                 </div>
                             )}
-                            {planningView === 'monthly' && monthlyDayDetail && (
+                                </div>
+                                {isPlanningLocked ? (
+                                    <div className="pointer-events-none absolute inset-0 flex items-start justify-center px-4 pt-16 sm:pt-24">
+                                        <div className="max-w-md rounded-xl border border-indigo-200/80 bg-white/95 px-6 py-5 text-center shadow-lg backdrop-blur-sm dark:border-indigo-700/50 dark:bg-gray-900/95">
+                                            <p className="text-base font-semibold text-gray-900 dark:text-white">
+                                                {t('planning_locked_overlay_title')}
+                                            </p>
+                                            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+                                                {t('planning_locked_overlay_intro')}
+                                            </p>
+                                            <ul className="mt-3 space-y-1.5 text-left text-sm text-gray-700 dark:text-gray-300">
+                                                {planningLockedOverlaySteps.map((key) => (
+                                                    <li key={key} className="flex items-start gap-2">
+                                                        <span className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden>
+                                                            ✓
+                                                        </span>
+                                                        <span>{t(key)}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                ) : null}
+                            </div>
+                            {planningView === 'monthly' && monthlyDayDetail && !isPlanningLocked && (
                                 <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/35 p-4" onClick={() => setMonthlyDayDetail(null)}>
                                     <div
                                         className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-4 shadow-xl dark:border-gray-700 dark:bg-gray-900"

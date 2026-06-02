@@ -98,10 +98,20 @@ export const translations: Translations = {
     "en": "Select a client to build this month's publication schedule.",
     "es": "Elige un cliente para armar el cronograma de publicaciones del mes.",
   },
+  "planning_entry_title_active": {
+    "pt": "Planejando cliente",
+    "en": "Planning client",
+    "es": "Planificando cliente",
+  },
   "planning_entry_active": {
     "pt": "Planejando: {name}",
     "en": "Planning: {name}",
     "es": "Planificando: {name}",
+  },
+  "planning_client_frequency": {
+    "pt": "Frequência: {freq}",
+    "en": "Frequency: {freq}",
+    "es": "Frecuencia: {freq}",
   },
   "planning_pick_client_hint": {
     "pt": "Escolha um cliente para montar o cronograma de publicações.",
@@ -146,10 +156,60 @@ export const translations: Translations = {
     "en": "{n} planning attention points",
     "es": "{n} puntos de atención en la planificación",
   },
+  "planning_intel_clients_need_review_one": {
+    "pt": "1 cliente precisa de revisão no cronograma",
+    "en": "1 client needs schedule review",
+    "es": "1 cliente necesita revisión del cronograma",
+  },
+  "planning_intel_clients_need_review_other": {
+    "pt": "{n} clientes precisam de revisão no cronograma",
+    "en": "{n} clients need schedule review",
+    "es": "{n} clientes necesitan revisión del cronograma",
+  },
+  "planning_intel_adjustments_one": {
+    "pt": "1 ajuste recomendado no planejamento",
+    "en": "1 recommended planning adjustment",
+    "es": "1 ajuste recomendado en la planificación",
+  },
+  "planning_intel_adjustments_other": {
+    "pt": "{n} ajustes recomendados no planejamento",
+    "en": "{n} recommended planning adjustments",
+    "es": "{n} ajustes recomendados en la planificación",
+  },
   "planning_intel_no_alerts": {
-    "pt": "Nenhum ponto de atenção no planejamento",
-    "en": "No planning attention points",
-    "es": "Ningún punto de atención en la planificación",
+    "pt": "Nenhum ajuste pendente no planejamento",
+    "en": "No pending planning adjustments",
+    "es": "Ningún ajuste pendiente en la planificación",
+  },
+  "planning_locked_overlay_title": {
+    "pt": "Selecione um cliente para começar",
+    "en": "Select a client to get started",
+    "es": "Selecciona un cliente para comenzar",
+  },
+  "planning_locked_overlay_intro": {
+    "pt": "Após selecionar você poderá:",
+    "en": "After selecting you will be able to:",
+    "es": "Después de seleccionar podrás:",
+  },
+  "planning_locked_overlay_step_forecasts": {
+    "pt": "Gerar previsões automáticas",
+    "en": "Generate automatic forecasts",
+    "es": "Generar previsiones automáticas",
+  },
+  "planning_locked_overlay_step_schedule": {
+    "pt": "Organizar o cronograma do mês",
+    "en": "Organize the monthly schedule",
+    "es": "Organizar el cronograma del mes",
+  },
+  "planning_locked_overlay_step_dates": {
+    "pt": "Ajustar datas de publicação",
+    "en": "Adjust publication dates",
+    "es": "Ajustar fechas de publicación",
+  },
+  "planning_locked_overlay_step_content": {
+    "pt": "Planejar os conteúdos da conta",
+    "en": "Plan the account content",
+    "es": "Planificar los contenidos de la cuenta",
   },
   "planning_intel_view_details": { "pt": "Ver detalhes", "en": "View details", "es": "Ver detalles" },
   "planning_intel_hide_details": { "pt": "Ocultar", "en": "Hide", "es": "Ocultar" },
