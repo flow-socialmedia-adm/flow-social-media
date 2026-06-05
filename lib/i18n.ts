@@ -126,6 +126,51 @@ export const translations: Translations = {
     "en": "Clients ready for planning: {n}",
     "es": "Clientes listos para planificación: {n}",
   },
+  "planning_status_agency_title": {
+    "pt": "Status do planejamento da agência",
+    "en": "Agency planning status",
+    "es": "Estado de la planificación de la agencia",
+  },
+  "planning_status_client_title": {
+    "pt": "Status do planejamento — {name}",
+    "en": "Planning status — {name}",
+    "es": "Estado de la planificación — {name}",
+  },
+  "planning_status_clients_ready": {
+    "pt": "Clientes prontos para planejamento: {n}",
+    "en": "Clients ready for planning: {n}",
+    "es": "Clientes listos para planificación: {n}",
+  },
+  "planning_status_clients_review_one": {
+    "pt": "1 cliente precisa de revisão no cronograma",
+    "en": "1 client needs schedule review",
+    "es": "1 cliente necesita revisión del cronograma",
+  },
+  "planning_status_clients_review_other": {
+    "pt": "{n} clientes precisam de revisão no cronograma",
+    "en": "{n} clients need schedule review",
+    "es": "{n} clientes necesitan revisión del cronograma",
+  },
+  "planning_status_planned": {
+    "pt": "Planejados: {n}",
+    "en": "Planned: {n}",
+    "es": "Planificados: {n}",
+  },
+  "planning_status_goal": {
+    "pt": "Meta: {n}",
+    "en": "Goal: {n}",
+    "es": "Meta: {n}",
+  },
+  "planning_status_missing": {
+    "pt": "Faltam: {n}",
+    "en": "Missing: {n}",
+    "es": "Faltan: {n}",
+  },
+  "planning_status_details_label": {
+    "pt": "Detalhes",
+    "en": "Details",
+    "es": "Detalles",
+  },
   "planning_kpi_clients_started_one": {
     "pt": "1 cliente com cronograma iniciado",
     "en": "1 client with a started schedule",

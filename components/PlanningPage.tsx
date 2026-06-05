@@ -139,6 +139,7 @@ const PlanningPage: React.FC = () => {
     const [modalTask, setModalTask] = useState<Partial<Task> | null>(null);
     const [forecastPopoverOpen, setForecastPopoverOpen] = useState(false);
     const [forecastGenerating, setForecastGenerating] = useState(false);
+    const [planningStatusExpanded, setPlanningStatusExpanded] = useState(false);
     const forecastPopoverRef = useRef<HTMLDivElement>(null);
     const isPlanningLocked = clientFilter === 'all';
     const [planningView, setPlanningView] = useState<'weekly' | 'monthly'>('monthly');
@@ -272,6 +273,7 @@ const PlanningPage: React.FC = () => {
             setMonthlyDayDetail(null);
             setForecastPopoverOpen(false);
         }
+        setPlanningStatusExpanded(false);
     }, [clientFilter]);
 
     const { canGenerateForecasts, generateForecastsTooltip } = useMemo(() => {
@@ -744,18 +746,6 @@ const PlanningPage: React.FC = () => {
     const clientFilterSelectClass =
         'h-10 min-h-[2.5rem] min-w-[200px] rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-800 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100';
 
-    const intelCompactCountKey = useMemo(() => {
-        if (planningIntelligenceItems.length === 0) return undefined;
-        if (clientFilter === 'all') {
-            return planningIntelligenceItems.length === 1
-                ? 'planning_intel_clients_need_review_one'
-                : 'planning_intel_clients_need_review_other';
-        }
-        return planningIntelligenceItems.length === 1
-            ? 'planning_intel_adjustments_one'
-            : 'planning_intel_adjustments_other';
-    }, [clientFilter, planningIntelligenceItems.length]);
-
     const planningEntrySteps = useMemo(
         () => [
             'planning_locked_overlay_step_forecasts',
@@ -910,44 +900,116 @@ const PlanningPage: React.FC = () => {
                                 ) : null}
                             </div>
 
-                            <div className="flex flex-col gap-3">
-                                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-gray-700 dark:text-gray-300">
-                                    {scheduleKpi.mode === 'client' ? (
+                            <div
+                                className="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-900/40"
+                                data-planning-wizard-step="planning-status"
+                            >
+                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                    {isPlanningLocked
+                                        ? t('planning_status_agency_title')
+                                        : t('planning_status_client_title', {
+                                              name: selectedClient?.name ?? t('planning_client_unknown'),
+                                          })}
+                                </h3>
+                                <ul className="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-300">
+                                    {scheduleKpi.mode === 'agency' ? (
                                         <>
-                                            <span>{t('planning_kpi_planned', { n: scheduleKpi.planned })}</span>
-                                            <span className="text-gray-500 dark:text-gray-400">·</span>
-                                            <span>
-                                                {t('planning_kpi_goal', {
-                                                    n: scheduleKpi.goal != null ? String(scheduleKpi.goal) : '—',
-                                                })}
-                                            </span>
-                                            <span className="text-gray-500 dark:text-gray-400">·</span>
-                                            <span
-                                                className={
-                                                    scheduleKpi.missing != null && scheduleKpi.missing > 0
-                                                        ? 'font-medium text-amber-700 dark:text-amber-300'
-                                                        : undefined
-                                                }
-                                            >
-                                                {t('planning_kpi_missing', {
-                                                    n: scheduleKpi.missing != null ? scheduleKpi.missing : '—',
-                                                })}
-                                            </span>
+                                            <li className="flex items-start gap-2">
+                                                <span className="shrink-0" aria-hidden>
+                                                    ✅
+                                                </span>
+                                                <span>
+                                                    {t('planning_status_clients_ready', {
+                                                        n: scheduleKpi.clientsWithPlanning,
+                                                    })}
+                                                </span>
+                                            </li>
+                                            {planningIntelligenceItems.length > 0 ? (
+                                                <li className="flex items-start gap-2">
+                                                    <span className="shrink-0" aria-hidden>
+                                                        ⚡
+                                                    </span>
+                                                    <span>
+                                                        {planningIntelligenceItems.length === 1
+                                                            ? t('planning_status_clients_review_one')
+                                                            : t('planning_status_clients_review_other', {
+                                                                  n: planningIntelligenceItems.length,
+                                                              })}
+                                                    </span>
+                                                </li>
+                                            ) : null}
                                         </>
                                     ) : (
-                                        <span>
-                                            {t('planning_kpi_clients_ready', { n: scheduleKpi.clientsWithPlanning })}
-                                        </span>
+                                        <>
+                                            <li className="flex items-start gap-2">
+                                                <span className="shrink-0" aria-hidden>
+                                                    ✅
+                                                </span>
+                                                <span>{t('planning_status_planned', { n: scheduleKpi.planned })}</span>
+                                            </li>
+                                            <li className="flex items-start gap-2">
+                                                <span className="shrink-0" aria-hidden>
+                                                    🎯
+                                                </span>
+                                                <span>
+                                                    {t('planning_status_goal', {
+                                                        n: scheduleKpi.goal != null ? String(scheduleKpi.goal) : '—',
+                                                    })}
+                                                </span>
+                                            </li>
+                                            <li
+                                                className={`flex items-start gap-2 ${
+                                                    scheduleKpi.missing != null && scheduleKpi.missing > 0
+                                                        ? 'font-medium text-amber-700 dark:text-amber-300'
+                                                        : ''
+                                                }`}
+                                            >
+                                                <span className="shrink-0" aria-hidden>
+                                                    📋
+                                                </span>
+                                                <span>
+                                                    {t('planning_status_missing', {
+                                                        n: scheduleKpi.missing != null ? scheduleKpi.missing : '—',
+                                                    })}
+                                                </span>
+                                            </li>
+                                            {planningIntelligenceItems.length > 0 ? (
+                                                <li className="flex items-start gap-2">
+                                                    <span className="shrink-0" aria-hidden>
+                                                        ⚡
+                                                    </span>
+                                                    <span>
+                                                        {planningIntelligenceItems.length === 1
+                                                            ? t('planning_intel_adjustments_one')
+                                                            : t('planning_intel_adjustments_other', {
+                                                                  n: planningIntelligenceItems.length,
+                                                              })}
+                                                    </span>
+                                                </li>
+                                            ) : null}
+                                        </>
                                     )}
-                                </div>
+                                </ul>
+                                {planningIntelligenceItems.length > 0 && !planningStatusExpanded ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setPlanningStatusExpanded(true)}
+                                        className="mt-3 text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400"
+                                    >
+                                        {t('planning_intel_view_details')}
+                                    </button>
+                                ) : null}
+                                {planningIntelligenceItems.length === 0 ? (
+                                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('planning_intel_no_alerts')}</p>
+                                ) : null}
                                 <IntelligentCentral
-                                    variant="compact"
-                                    className="w-full max-w-xl"
+                                    variant="embedded"
                                     items={planningIntelligenceItems}
                                     t={t}
                                     onAction={handlePlanningIntelAction}
                                     emptyMessageKey="planning_balanced"
-                                    compactCountKey={intelCompactCountKey}
+                                    expanded={planningStatusExpanded}
+                                    onExpandedChange={setPlanningStatusExpanded}
                                 />
                             </div>
 
