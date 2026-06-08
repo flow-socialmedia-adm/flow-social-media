@@ -1,4 +1,5 @@
 import React from 'react';
+import type { BriefingV2 } from './lib/briefingV2/types';
 import type { ClientStageKey } from './lib/client-stage-keys';
 import { CLIENT_STAGE_KEYS } from './lib/client-stage-keys';
 import type { AgencyModuleKey, ModuleAccessLevel } from './lib/modulePermissions';
@@ -605,6 +606,9 @@ export interface Client {
   strategyContentPillars?: Array<{ id: string; name: string; description?: string; objective?: string; exampleThemes?: string }>;
   /** ISO string - última atualização da estratégia (preenchido ao salvar) */
   strategyLastUpdated?: string;
+
+  /** Briefing Schema V2 — canônico; campos flat são espelho para downstream (dual-read). */
+  briefingV2?: BriefingV2;
 
   contract?: {
       services?: Service[];

@@ -10,6 +10,8 @@ import { normalizeClient } from './clients/clientUtils';
 import { defaultClientOwnerPreferences } from '../lib/client-owner-preferences';
 import { urlTemplates } from './clients/socialHelpers';
 import { resolveColorHex } from '../lib/utils';
+import { migrateClientToBriefingV2 } from '../lib/briefingV2/migrate';
+import { syncLegacyBrandGuideFields } from '../lib/briefingV2/syncLegacy';
 import {
     CONTENT_BELOW_HEADER_PAD,
     CONTENT_PAGE_BODY_INNER,
@@ -178,6 +180,21 @@ const ClientsPage: React.FC = () => {
             const avatarUrlFromPrincipal = (clientToSave.principalLogoIndex != null && logos[clientToSave.principalLogoIndex]?.url)
                 ? logos[clientToSave.principalLogoIndex].url
                 : null;
+            const briefingBase = clientToSave.briefingV2 ?? migrateClientToBriefingV2(clientToSave);
+            const briefingForSave = {
+                ...briefingBase,
+                _internal: {
+                    ...briefingBase._internal,
+                    planning: {
+                        ...briefingBase._internal?.planning,
+                        accountOwnerLegacy:
+                            clientToSave.planningAccountOwner ||
+                            briefingBase._internal?.planning?.accountOwnerLegacy,
+                    },
+                },
+            };
+            const legacyBriefingSync = syncLegacyBrandGuideFields(briefingForSave);
+
             const clientPayload: Record<string, unknown> = {
                 name: clientToSave.name?.trim() ?? '',
                 type: clientToSave.clientType || 'individual',
@@ -195,7 +212,6 @@ const ClientsPage: React.FC = () => {
                     principalLogoIndex: clientToSave.principalLogoIndex ?? null,
                     typography: clientToSave.typography || {},
                     brandAssets: clientToSave.brandAssets || [],
-                    toneOfVoice: clientToSave.toneOfVoice || '',
                     legalRepresentativeRg: clientToSave.legalRepresentativeRg || null,
                     legalRepresentativeEmail: clientToSave.legalRepresentativeEmail || null,
                     legalRepresentativeWhatsapp: clientToSave.legalRepresentativeWhatsapp || null,
@@ -205,78 +221,10 @@ const ClientsPage: React.FC = () => {
                     companyLandlinePhone: clientToSave.companyLandlinePhone || null,
                     companyPhone: clientToSave.companyPhone || null,
                     brandGuidelines: (clientToSave.brandHistory || clientToSave.brandGuidelines) || null,
-                    brandHistory: clientToSave.brandHistory || null,
-                    brandValues: clientToSave.brandValues || null,
-                    brandMission: clientToSave.brandMission || null,
-                    brandVision: clientToSave.brandVision || null,
-                    strategyCompetitors: clientToSave.strategyCompetitors && clientToSave.strategyCompetitors.length > 0 ? clientToSave.strategyCompetitors : null,
-                    strategyInspirations: clientToSave.strategyInspirations && clientToSave.strategyInspirations.length > 0 ? clientToSave.strategyInspirations : null,
-                    audienceAgeRange: clientToSave.audienceAgeRange || null,
-                    audienceRegion: clientToSave.audienceRegion || null,
-                    audienceGeneralProfile: clientToSave.audienceGeneralProfile || null,
-                    audienceGeneralNotes: clientToSave.audienceGeneralNotes || null,
-                    strategyPersonas: clientToSave.strategyPersonas && clientToSave.strategyPersonas.length > 0 ? clientToSave.strategyPersonas : null,
-                    competitors: (() => {
-                        const sc = clientToSave.strategyCompetitors;
-                        if (Array.isArray(sc) && sc.length > 0) return sc.map((x) => x.name).filter(Boolean).join('\n') || null;
-                        return clientToSave.competitors || null;
-                    })(),
-                    audienceWho: (() => {
-                        const personas = clientToSave.strategyPersonas;
-                        if (Array.isArray(personas) && personas[0]?.description) return personas[0].description;
-                        return clientToSave.audienceWho || null;
-                    })(),
-                    audiencePains: (() => {
-                        const personas = clientToSave.strategyPersonas;
-                        if (Array.isArray(personas) && personas[0]?.pains) return personas[0].pains;
-                        return clientToSave.audiencePains || null;
-                    })(),
-                    audienceDesires: (() => {
-                        const personas = clientToSave.strategyPersonas;
-                        if (Array.isArray(personas) && personas[0]?.desires) return personas[0].desires;
-                        return clientToSave.audienceDesires || null;
-                    })(),
-                    objectives: clientToSave.objectives || null,
-                    kpis: clientToSave.kpis || null,
-                    businessSummary: clientToSave.businessSummary || null,
-                    mainServices: clientToSave.mainServices || null,
-                    differentiators: clientToSave.differentiators || null,
-                    howWantToBePerceived: clientToSave.howWantToBePerceived || null,
-                    avoidInCommunication: clientToSave.avoidInCommunication || null,
-                    commonObjections: (() => {
-                        const personas = clientToSave.strategyPersonas;
-                        if (Array.isArray(personas) && personas[0]?.objections) return personas[0].objections;
-                        return clientToSave.commonObjections || null;
-                    })(),
-                    wordsThatFit: clientToSave.wordsThatFit || null,
-                    wordsThatDontFit: clientToSave.wordsThatDontFit || null,
-                    contentStyle: clientToSave.contentStyle || null,
-                    preferredCta: clientToSave.preferredCta || null,
-                    mainProfileObjective: clientToSave.mainProfileObjective || null,
-                    momentObjective: clientToSave.momentObjective || null,
-                    monthlyObjective: clientToSave.monthlyObjective || null,
-                    postFrequency: clientToSave.postFrequency || null,
-                    postFrequencyQuantity: clientToSave.postFrequencyQuantity ?? null,
-                    postFrequencyPeriod: clientToSave.postFrequencyPeriod || null,
-                    postFrequencyVariable: clientToSave.postFrequencyVariable ?? null,
-                    preferredPostDays: clientToSave.preferredPostDays && clientToSave.preferredPostDays.length > 0 ? clientToSave.preferredPostDays : null,
-                    planningCalendarNotes: clientToSave.planningCalendarNotes || null,
-                    planningAvgPostsPerWeek: clientToSave.planningAvgPostsPerWeek || null,
-                    planningProductionLeadDays: clientToSave.planningProductionLeadDays || null,
-                    planningApprovalLeadDays: clientToSave.planningApprovalLeadDays || null,
-                    planningSchedulingLeadDays: clientToSave.planningSchedulingLeadDays || null,
-                    planningApprovalRequired: clientToSave.planningApprovalRequired ?? null,
-                    planningPeriodFocus: clientToSave.planningPeriodFocus || null,
-                    planningPerformanceNotes: clientToSave.planningPerformanceNotes || null,
-                    planningAccountOwner: clientToSave.planningAccountOwner || null,
-                    planningApprovalChannel: clientToSave.planningApprovalChannel || null,
-                    planningClientResponseTime: clientToSave.planningClientResponseTime || null,
-                    planningOperationNotes: clientToSave.planningOperationNotes || null,
-                    strategyContentPillars: clientToSave.strategyContentPillars && clientToSave.strategyContentPillars.length > 0 ? clientToSave.strategyContentPillars : null,
-                    strategyLastUpdated: new Date().toISOString(),
+                    ...legacyBriefingSync,
                 },
                 accessCredentialsJson: clientToSave.accessCredentials || null,
-                notes: clientToSave.strategyNotes || null,
+                notes: briefingForSave.content.strategyNotes || clientToSave.strategyNotes || null,
                 clientOwnerPreferencesJson: clientToSave.ownerPreferences ?? defaultClientOwnerPreferences(),
             };
 

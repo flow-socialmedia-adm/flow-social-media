@@ -1,5 +1,7 @@
 import type { Client, SocialLink } from '../../types';
 import { parseClientOwnerPreferencesFromApi } from '../../lib/client-owner-preferences';
+import { applyBriefingToClientFlat } from '../../lib/briefingV2/syncLegacy';
+import { resolveBriefingV2 } from '../../lib/briefingV2/migrate';
 
 /**
  * Guardrail: Merge de clientes preservando campos essenciais.
@@ -71,7 +73,7 @@ export const normalizeClient = (c: Record<string, unknown>): Client => {
         });
     })();
 
-    return {
+    const baseClient: Client = {
         id: (c.id as string) || '',
         name: (c.name as string) || '',
         color: (c.color as string) || 'bg-slate-600',
@@ -202,4 +204,7 @@ export const normalizeClient = (c: Record<string, unknown>): Client => {
         contract: contract as Client['contract'],
         ownerPreferences: parseClientOwnerPreferencesFromApi(c.clientOwnerPreferencesJson),
     };
+
+    const briefing = resolveBriefingV2(baseClient, brandGuide);
+    return { ...baseClient, ...applyBriefingToClientFlat(briefing) };
 };

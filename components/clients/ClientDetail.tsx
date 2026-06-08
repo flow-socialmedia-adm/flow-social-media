@@ -23,7 +23,7 @@ import { defaultClientOwnerPreferences } from '../../lib/client-owner-preference
 import { stableStringify } from '../../lib/utils/stableStringify';
 import { useGoogleFont } from './useGoogleFont';
 const BrandGuideSectionEditor = lazy(() => import('./sectionEditors/BrandGuideSectionEditor').then((m) => ({ default: m.BrandGuideSectionEditor })));
-const StrategySectionEditor = lazy(() => import('./sectionEditors/StrategySectionEditor').then((m) => ({ default: m.StrategySectionEditor })));
+const BriefingV2StrategyEditor = lazy(() => import('./briefing/BriefingV2StrategyEditor').then((m) => ({ default: m.BriefingV2StrategyEditor })));
 import { STRATEGY_DEFAULT_EXPANDED } from './sectionEditors/strategySectionConstants';
 import { BRAND_GUIDE_DEFAULT_EXPANDED } from './sectionEditors/brandGuideSectionConstants';
 import { CLIENT_DATA_DEFAULT_EXPANDED } from './sectionEditors/clientDataSectionConstants';
@@ -769,14 +769,13 @@ const ClientDetail: React.FC<{
             case 'strategy':
                 return (
                     <Suspense fallback={<SectionEditorFallback />}>
-                        <StrategySectionEditor
+                        <BriefingV2StrategyEditor
                             editedClient={editedClient}
                             handlers={{ onUpdate: handleUpdate, onCancel: handleCancel, onSave: handleSave, requestConfirmation }}
                             isDirty={isDirty}
                             saveBarMessage={saveBarMessage}
                             onFeedbackDismiss={() => setSaveBarMessage(null)}
                             t={t}
-                            onOpenPersonaPhotoUpload={(idx) => { setPersonaPhotoUploadIndex(idx); setUploadTarget('persona_photo'); setUploadError(null); setIsUploadModalOpen(true); }}
                             expandedSections={strategyExpandedSections}
                             onExpandedSectionsChange={setStrategyExpandedSections}
                             embeddedSaveBar={false}

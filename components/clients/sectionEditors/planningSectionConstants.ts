@@ -1,6 +1,4 @@
-/** Chaves dos blocos colapsáveis da guia Planejamento. Valor inicial: todos recolhidos. */
+/** Chaves dos blocos colapsáveis — Briefing V2 (Planejamento). Um bloco principal. */
 export const PLANNING_DEFAULT_EXPANDED: Record<string, boolean> = {
-    main_frequency: false,
-    main_performance: false,
-    main_operation: false,
+    planning: false,
 };
