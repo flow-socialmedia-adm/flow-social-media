@@ -84,9 +84,9 @@ export const translations: Translations = {
   "agenda_filter_approved_not_scheduled": { "pt": "Aprovados não agendados", "en": "Approved not scheduled", "es": "Aprobados sin programar" },
   "agenda_filter_awaiting_approval": { "pt": "Aguardando aprovação", "en": "Awaiting approval", "es": "En espera de aprobación" },
   "editorial_calendar_subtitle": {
-    "pt": "Monte aqui o cronograma de publicações por cliente.",
-    "en": "Build each client's publication schedule here.",
-    "es": "Arma aquí el cronograma de publicaciones por cliente.",
+    "pt": "Central de planejamento de conteúdo por cliente.",
+    "en": "Content planning hub per client.",
+    "es": "Central de planificación de contenido por cliente.",
   },
   "planning_entry_title": {
     "pt": "Planeje um cliente por vez",
@@ -114,9 +114,114 @@ export const translations: Translations = {
     "es": "Frecuencia: {freq}",
   },
   "planning_pick_client_hint": {
-    "pt": "Escolha um cliente para montar o cronograma de publicações.",
-    "en": "Select a client to build the publication schedule.",
-    "es": "Elige un cliente para armar el cronograma de publicaciones.",
+    "pt": "Selecione um cliente para iniciar o planejamento.",
+    "en": "Select a client to start planning.",
+    "es": "Selecciona un cliente para iniciar la planificación.",
+  },
+  "planning_client_card_title_empty": {
+    "pt": "Escolha o cliente que será planejado",
+    "en": "Choose the client to plan",
+    "es": "Elige el cliente a planificar",
+  },
+  "planning_client_card_title_active": {
+    "pt": "Planejando: {name}",
+    "en": "Planning: {name}",
+    "es": "Planificando: {name}",
+  },
+  "planning_client_planning_status": {
+    "pt": "Planejamento: {status}",
+    "en": "Planning: {status}",
+    "es": "Planificación: {status}",
+  },
+  "planning_agency_central_title": {
+    "pt": "Central de Planejamento da Agência",
+    "en": "Agency Planning Hub",
+    "es": "Central de Planificación de la Agencia",
+  },
+  "planning_agency_ready_title": {
+    "pt": "Clientes prontos para planejamento",
+    "en": "Clients ready for planning",
+    "es": "Clientes listos para planificación",
+  },
+  "planning_agency_ready_empty": {
+    "pt": "Nenhum cliente com briefing operacional completo ainda.",
+    "en": "No clients with complete operational briefing yet.",
+    "es": "Ningún cliente con briefing operativo completo aún.",
+  },
+  "planning_agency_review_title": {
+    "pt": "Clientes que precisam de revisão",
+    "en": "Clients needing review",
+    "es": "Clientes que necesitan revisión",
+  },
+  "planning_agency_review_empty": {
+    "pt": "Nenhum cliente pendente de revisão.",
+    "en": "No clients pending review.",
+    "es": "Ningún cliente pendiente de revisión.",
+  },
+  "planning_agency_month_alerts_title": {
+    "pt": "Alertas globais do mês",
+    "en": "Global month alerts",
+    "es": "Alertas globales del mes",
+  },
+  "planning_agency_alerts_empty": {
+    "pt": "Nenhum alerta global para este período.",
+    "en": "No global alerts for this period.",
+    "es": "Ninguna alerta global para este período.",
+  },
+  "planning_summary_content_title": {
+    "pt": "Conteúdo",
+    "en": "Content",
+    "es": "Contenido",
+  },
+  "planning_summary_planning_title": {
+    "pt": "Planejamento",
+    "en": "Planning",
+    "es": "Planificación",
+  },
+  "planning_summary_operation_title": {
+    "pt": "Operação",
+    "en": "Operations",
+    "es": "Operación",
+  },
+  "planning_quick_action_define_frequency": {
+    "pt": "Definir frequência",
+    "en": "Set frequency",
+    "es": "Definir frecuencia",
+  },
+  "planning_quick_action_define_pillars": {
+    "pt": "Definir pilares",
+    "en": "Set pillars",
+    "es": "Definir pilares",
+  },
+  "planning_quick_action_define_owner": {
+    "pt": "Definir responsável",
+    "en": "Set owner",
+    "es": "Definir responsable",
+  },
+  "planning_quick_action_define_month_focus": {
+    "pt": "Definir objetivo do mês",
+    "en": "Set month focus",
+    "es": "Definir objetivo del mes",
+  },
+  "planning_briefing_status_empty": {
+    "pt": "Briefing vazio",
+    "en": "Empty briefing",
+    "es": "Briefing vacío",
+  },
+  "planning_briefing_status_started": {
+    "pt": "Briefing iniciado",
+    "en": "Briefing started",
+    "es": "Briefing iniciado",
+  },
+  "planning_briefing_status_partial": {
+    "pt": "Briefing parcial",
+    "en": "Partial briefing",
+    "es": "Briefing parcial",
+  },
+  "planning_briefing_status_complete": {
+    "pt": "Briefing completo",
+    "en": "Complete briefing",
+    "es": "Briefing completo",
   },
   "planning_kpi_planned": { "pt": "{n} planejados", "en": "{n} planned", "es": "{n} planificados" },
   "planning_kpi_goal": { "pt": "meta: {n}", "en": "goal: {n}", "es": "meta: {n}" },
@@ -287,7 +392,7 @@ export const translations: Translations = {
   "clients": { "pt": "Clientes", "en": "Clients", "es": "Clientes" },
   "planejamento": { "pt": "Planejamento", "en": "Planning", "es": "Planificación" },
   /** Página do menu (calendário semanal de posts/previsões); não confundir com a aba Planejamento do cliente. */
-  "editorial_calendar": { "pt": "Calendário Editorial", "en": "Editorial calendar", "es": "Calendario editorial" },
+  "editorial_calendar": { "pt": "Planejamento de Conteúdo", "en": "Content Planning", "es": "Planificación de Contenido" },
   "editorial_calendar_empty_hint": {
     "pt": "Cadastre clientes para montar o calendário editorial da semana (previsões e posts).",
     "en": "Add clients to build your weekly editorial calendar (forecasts and posts).",
@@ -2095,7 +2200,7 @@ export const translations: Translations = {
   "hist_item_income": { "pt": "a entrada", "en": "the income entry", "es": "el ingreso" },
   "hist_item_expense": { "pt": "a despesa", "en": "the expense", "es": "el gasto" },
   "hist_page_tasks": { "pt": "Tarefas", "en": "Tasks", "es": "Tareas" },
-  "hist_page_editorial": { "pt": "Calendário Editorial", "en": "Editorial calendar", "es": "Calendario editorial" },
+  "hist_page_editorial": { "pt": "Planejamento de Conteúdo", "en": "Content Planning", "es": "Planificación de Contenido" },
   "hist_page_agenda": { "pt": "Agenda", "en": "Schedule", "es": "Agenda" },
   "hist_page_posts": { "pt": "Posts", "en": "Posts", "es": "Publicaciones" },
   "hist_page_clients": { "pt": "Clientes", "en": "Clients", "es": "Clientes" },

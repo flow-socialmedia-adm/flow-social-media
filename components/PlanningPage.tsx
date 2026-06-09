@@ -1,16 +1,17 @@
 import React, { useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
-import type { Task, Language } from '../types';
+import type { Client, Task, Language } from '../types';
+import type { TabId } from './ClientPresentationView';
 import { formatDateToYYYYMMDD, getWeekDaysMondayFirst, getExpectedForWeek, getExpectedForMonth, getDateRangeForForecastPeriod, computeForecastDatesToCreate, getMonthName, getMonthDays, isToday } from '../lib/utils';
 import type { ForecastPeriodKey } from '../lib/utils';
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, PlusIcon, FunnelIcon } from './icons';
-import FilterDropdown from './tasks/FilterDropdown';
+import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, FunnelIcon } from './icons';
+import TooltipHint from './TooltipHint';
 import { apiGet, apiPost, apiPut } from '../lib/api';
 import {
     CONTENT_BELOW_HEADER_PAD,
     CONTENT_PAGE_BODY_INNER,
     CONTENT_PAGE_SCROLL_OUTER,
-    HEADER_GRADIENT_PLUS_CLASS,
     CONTENT_PAGE_SUBTOOLBAR_STRIP,
     SUBTOOLBAR_ICON_BUTTON_CLASS,
     SUBTOOLBAR_TEXT_BUTTON_CLASS,
@@ -23,12 +24,15 @@ import { buildTaskFlowHistoryLine } from '../lib/activityHistoryPayload';
 import { resolveClientPostWorkflowId } from '../lib/colorSchemes';
 import { getPostStatusBorderClass } from '../lib/postStatusBorder';
 import ContentPageHeader from './ContentPageHeader';
-import TooltipHint from './TooltipHint';
 import { getClientPlanningProfile } from '../lib/clientContext';
-import { buildPlanningIntelligenceItems, type IntelligenceItem } from '../lib/intelligentCentral';
+import { buildPlanningIntelligenceItems } from '../lib/intelligentCentral';
 import { createPlanningQuotaValidator } from '../lib/planningQuota';
 import { scopePlanningCentralItems } from '../lib/planningCentralView';
-import IntelligentCentral from './IntelligentCentral';
+import { normalizeClient } from './clients/clientUtils';
+import { computeAgencyPlanningLists } from '../lib/planningAgencyCentral';
+import { setClientDeepLink } from '../lib/planningClientNavigation';
+import { PlanningAgencyCentral } from './planning/PlanningAgencyCentral';
+import { PlanningClientCard } from './planning/PlanningClientCard';
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
@@ -100,26 +104,12 @@ function groupPlanningDayItemsByClient(
         .sort((a, b) => a.clientName.localeCompare(b.clientName, 'pt-BR'));
 }
 
-type PlanningClient = {
-    id: string;
-    name: string;
-    color?: string;
-    postFrequency?: string;
-    postFrequencyQuantity?: number;
-    postFrequencyPeriod?: 'week' | 'month';
-    postFrequencyVariable?: boolean;
-    preferredPostDays?: string[];
-    planningProductionLeadDays?: string;
-    planningApprovalLeadDays?: string;
-    planningSchedulingLeadDays?: string;
-    planningApprovalRequired?: boolean;
-};
-
 const PlanningPage: React.FC = () => {
     const context = useContext(AppContext);
+    const navigate = useNavigate();
     if (!context) return null;
 
-    const { t, language, tasks, setTasks, workflows, clientWorkflowId, notify, setPage, agencyMode, canEditModule, canViewModule, logActivity } =
+    const { t, language, tasks, setTasks, workflows, clientWorkflowId, notify, setPage, agencyMode, agencyProfile, canEditModule, canViewModule, logActivity } =
         context;
     const canEditPlanning = canEditModule('planning');
     const canViewPosts = canViewModule('posts');
@@ -132,14 +122,13 @@ const PlanningPage: React.FC = () => {
         d.setHours(0, 0, 0, 0);
         return d;
     });
-    const [clients, setClients] = useState<PlanningClient[]>([]);
+    const [clients, setClients] = useState<Client[]>([]);
     const [clientFilter, setClientFilter] = useState<string>('all');
     const [loading, setLoading] = useState(true);
     const [createModal, setCreateModal] = useState<{ clientId: string; clientName: string; date: string } | null>(null);
     const [modalTask, setModalTask] = useState<Partial<Task> | null>(null);
     const [forecastPopoverOpen, setForecastPopoverOpen] = useState(false);
     const [forecastGenerating, setForecastGenerating] = useState(false);
-    const [planningStatusExpanded, setPlanningStatusExpanded] = useState(false);
     const forecastPopoverRef = useRef<HTMLDivElement>(null);
     const isPlanningLocked = clientFilter === 'all';
     const [planningView, setPlanningView] = useState<'weekly' | 'monthly'>('monthly');
@@ -176,25 +165,7 @@ const PlanningPage: React.FC = () => {
                     apiGet<{ items: any[] }>('/tasks', { startDate: dataStartDate, endDate: dataEndDate, page: 1, pageSize: 1000 }),
                 ]);
                 const rawClients = clientsResp?.items || [];
-                const planningClients: PlanningClient[] = rawClients.map((c: any) => {
-                    const bg = (c.brandGuideJson || {}) as Record<string, unknown>;
-                    return {
-                        id: c.id,
-                        name: c.name || '',
-                        color: c.color,
-                        postFrequency: (bg.postFrequency ?? c.postFrequency) as string | undefined,
-                        postFrequencyQuantity: (bg.postFrequencyQuantity ?? c.postFrequencyQuantity) as number | undefined,
-                        postFrequencyPeriod: (bg.postFrequencyPeriod ?? c.postFrequencyPeriod) as 'week' | 'month' | undefined,
-                        postFrequencyVariable: Boolean(bg.postFrequencyVariable ?? c.postFrequencyVariable),
-                        preferredPostDays: Array.isArray(bg.preferredPostDays ?? c.preferredPostDays)
-                            ? (bg.preferredPostDays ?? c.preferredPostDays) as string[]
-                            : [],
-                        planningProductionLeadDays: String(bg.planningProductionLeadDays ?? c.planningProductionLeadDays ?? ''),
-                        planningApprovalLeadDays: String(bg.planningApprovalLeadDays ?? c.planningApprovalLeadDays ?? ''),
-                        planningSchedulingLeadDays: String(bg.planningSchedulingLeadDays ?? c.planningSchedulingLeadDays ?? ''),
-                        planningApprovalRequired: Boolean(bg.planningApprovalRequired ?? c.planningApprovalRequired ?? true),
-                    };
-                });
+                const planningClients: Client[] = rawClients.map((c: Record<string, unknown>) => normalizeClient(c));
                 setClients(planningClients);
 
                 if (tasksResp?.items) {
@@ -273,7 +244,6 @@ const PlanningPage: React.FC = () => {
             setMonthlyDayDetail(null);
             setForecastPopoverOpen(false);
         }
-        setPlanningStatusExpanded(false);
     }, [clientFilter]);
 
     const { canGenerateForecasts, generateForecastsTooltip } = useMemo(() => {
@@ -324,22 +294,9 @@ const PlanningPage: React.FC = () => {
         return { five: rows >= 5, six: rows >= 6 };
     }, [planningView, currentMonthAnchor]);
 
-    const planningIntelligenceItems = useMemo(() => {
-        const profiles = filteredClients.map((c) =>
-            getClientPlanningProfile(
-                {
-                    id: c.id,
-                    name: c.name,
-                    postFrequency: c.postFrequency,
-                    postFrequencyQuantity: c.postFrequencyQuantity,
-                    postFrequencyPeriod: c.postFrequencyPeriod,
-                    postFrequencyVariable: c.postFrequencyVariable,
-                    preferredPostDays: c.preferredPostDays,
-                } as import('../types').Client,
-                weekDays,
-            ),
-        );
-        const raw = buildPlanningIntelligenceItems({
+    const allPlanningIntelligenceRaw = useMemo(() => {
+        const profiles = clients.map((c) => getClientPlanningProfile(c, weekDays));
+        return buildPlanningIntelligenceItems({
             clients: profiles,
             planningItems,
             weekDays,
@@ -348,12 +305,8 @@ const PlanningPage: React.FC = () => {
             monthHasFiveWeeks: monthCalendarRows.five,
             monthHasSixWeeks: monthCalendarRows.six,
         });
-        return scopePlanningCentralItems(raw, clientFilter).map((item) => {
-            const { contextKey: _ctx, ...rest } = item;
-            return rest;
-        });
     }, [
-        filteredClients,
+        clients,
         planningItems,
         weekDays,
         startDate,
@@ -362,8 +315,12 @@ const PlanningPage: React.FC = () => {
         dataEndDate,
         planningView,
         monthCalendarRows,
-        clientFilter,
     ]);
+
+    const agencyPlanningLists = useMemo(
+        () => computeAgencyPlanningLists(clients, scopePlanningCentralItems(allPlanningIntelligenceRaw, 'all')),
+        [clients, allPlanningIntelligenceRaw],
+    );
 
     const postsByClientAndDate = useMemo(() => {
         const map = new Map<string, Task[]>();
@@ -448,76 +405,6 @@ const PlanningPage: React.FC = () => {
         }
         return map;
     }, [planningView, planningItems, clientFilter, currentMonthAnchor]);
-
-    const monthPlannedTotal = useMemo(() => {
-        if (planningView !== 'monthly') return 0;
-        return Array.from(planningMonthDayStats.values()).reduce((sum, stats) => sum + stats.total, 0);
-    }, [planningView, planningMonthDayStats]);
-
-    const scheduleKpi = useMemo(() => {
-        if (clientFilter !== 'all' && selectedClient) {
-            if (planningView === 'weekly') {
-                const planned = weekSummary.totalPlanned;
-                const goal = weekSummary.totalExpected > 0 ? Math.ceil(weekSummary.totalExpected) : null;
-                const missing = goal != null ? Math.max(0, goal - planned) : null;
-                return { mode: 'client' as const, planned, goal, missing };
-            }
-            const y = currentMonthAnchor.getFullYear();
-            const m = currentMonthAnchor.getMonth();
-            const planned = monthPlannedTotal;
-            const expectedRaw = getExpectedForMonth(selectedClient, y, m);
-            const goal = expectedRaw != null ? Math.ceil(expectedRaw) : null;
-            const missing = goal != null ? Math.max(0, goal - planned) : null;
-            return { mode: 'client' as const, planned, goal, missing };
-        }
-
-        if (planningView === 'weekly') {
-            let clientsWithPlanning = 0;
-            for (const c of clients) {
-                const clientItems = planningItems.filter(
-                    (p) =>
-                        p.clientId === c.id &&
-                        (p.publishDate ?? p.date) >= startDate &&
-                        (p.publishDate ?? p.date) <= endDate,
-                );
-                if (clientItems.length > 0) clientsWithPlanning += 1;
-            }
-            return {
-                mode: 'agency' as const,
-                clientsWithPlanning,
-                clientsWithGap: weekSummary.clientsWithGap,
-            };
-        }
-
-        const y = currentMonthAnchor.getFullYear();
-        const m = currentMonthAnchor.getMonth();
-        const low = formatDateToYYYYMMDD(new Date(y, m, 1));
-        const hi = formatDateToYYYYMMDD(new Date(y, m + 1, 0));
-        let clientsWithPlanning = 0;
-        let clientsWithGap = 0;
-        for (const c of clients) {
-            const clientItems = planningItems.filter((p) => {
-                const ds = (p.publishDate ?? p.date ?? '').slice(0, 10);
-                return p.clientId === c.id && ds >= low && ds <= hi;
-            });
-            const planned = clientItems.length;
-            if (planned > 0) clientsWithPlanning += 1;
-            const expected = getExpectedForMonth(c, y, m);
-            if (expected != null && planned < Math.ceil(expected)) clientsWithGap += 1;
-        }
-        return { mode: 'agency' as const, clientsWithPlanning, clientsWithGap };
-    }, [
-        clientFilter,
-        selectedClient,
-        planningView,
-        weekSummary,
-        monthPlannedTotal,
-        currentMonthAnchor,
-        clients,
-        planningItems,
-        startDate,
-        endDate,
-    ]);
 
     const openWeekContainingDay = useCallback((day: Date) => {
         const monday = getWeekDaysMondayFirst(day)[0];
@@ -630,22 +517,17 @@ const PlanningPage: React.FC = () => {
 
     const weekLabel = `${weekDays[0].getDate()}/${weekDays[0].getMonth() + 1} – ${weekDays[6].getDate()}/${weekDays[6].getMonth() + 1} ${weekDays[0].getFullYear()}`;
 
-    const handleHeaderAdd = useCallback(() => {
-        const first = filteredClients[0];
-        if (!first) return;
-        const dateStr = planningView === 'weekly' ? startDate : dataStartDate;
-        openCreate(first.id, first.name, dateStr);
-    }, [filteredClients, startDate, dataStartDate, planningView, openCreate]);
+    const focusClient = useCallback((clientId: string) => {
+        setClientFilter(clientId);
+    }, []);
 
-    const focusClient = useCallback((clientId: string) => setClientFilter((prev) => (prev === clientId ? 'all' : clientId)), []);
-
-    const handlePlanningIntelAction = useCallback(
-        (item: IntelligenceItem) => {
-            if (item.clientId) {
-                focusClient(item.clientId);
-            }
+    const goToClientTab = useCallback(
+        (clientId: string, tab: TabId) => {
+            setClientDeepLink(clientId, tab);
+            setPage('clients');
+            navigate(`/clientes/${clientId}`);
         },
-        [focusClient],
+        [navigate, setPage],
     );
 
     useEffect(() => {
@@ -746,39 +628,11 @@ const PlanningPage: React.FC = () => {
     const clientFilterSelectClass =
         'h-10 min-h-[2.5rem] min-w-[200px] rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-800 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100';
 
-    const planningEntrySteps = useMemo(
-        () => [
-            'planning_locked_overlay_step_forecasts',
-            'planning_locked_overlay_step_schedule',
-            'planning_locked_overlay_step_dates',
-            'planning_locked_overlay_step_content',
-        ],
-        [],
-    );
-
     return (
         <div className="flex min-h-full min-w-0 w-full flex-1 flex-col">
-            {/* Mesma hierarquia do header de Tarefas; `justify-end` só aqui: ancoragem na base da faixa (min-h > conteúdo). */}
             <ContentPageHeader
                 heading={t('editorial_calendar')}
                 subtitle={t('editorial_calendar_subtitle')}
-                actions={(
-                    <>
-                            {canEditPlanning && (
-                            <TooltipHint label={t('planning_add_post_slot')}>
-                                <button
-                                    type="button"
-                                    onClick={handleHeaderAdd}
-                                    disabled={filteredClients.length === 0 || isPlanningLocked}
-                                    aria-label={t('adicionar')}
-                                    className={HEADER_GRADIENT_PLUS_CLASS}
-                                >
-                                    <PlusIcon className="h-5 w-5 transition-transform duration-200 group-hover:rotate-90" />
-                                </button>
-                            </TooltipHint>
-                            )}
-                    </>
-                )}
             />
 
             <main className={`${CONTENT_PAGE_SCROLL_OUTER} ${CONTENT_BELOW_HEADER_PAD}`}>
@@ -787,235 +641,44 @@ const PlanningPage: React.FC = () => {
                         <div className="flex justify-center py-16">
                             <div className="animate-pulse text-gray-500 dark:text-gray-400">{t('loading') || 'Carregando...'}</div>
                         </div>
-                    ) : filteredClients.length === 0 ? (
+                    ) : clients.length === 0 ? (
                         <div className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30 p-12 text-center">
                             <p className="text-gray-500 dark:text-gray-400">{t('empty_state_clients_subtitle')}</p>
                         </div>
                     ) : (
                         <>
-                            <div
-                                className="rounded-xl border-2 border-indigo-200 bg-gradient-to-br from-indigo-50 via-white to-violet-50 px-5 py-5 shadow-sm dark:border-indigo-700/60 dark:from-indigo-950/40 dark:via-gray-900 dark:to-violet-950/30"
-                                data-planning-wizard-step="client-entry"
-                                data-planning-wizard-phase={isPlanningLocked ? 'select-client' : 'plan-client'}
-                            >
-                                <h2 className="text-lg font-bold text-indigo-950 dark:text-indigo-100">
-                                    {isPlanningLocked ? t('planning_entry_title') : t('planning_entry_title_active')}
-                                </h2>
-                                {isPlanningLocked ? (
-                                    <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-indigo-900/80 dark:text-indigo-200/90">
-                                        {t('planning_entry_body')}
-                                    </p>
-                                ) : (
-                                    <p className="mt-1.5 text-base font-semibold text-indigo-950 dark:text-indigo-100">
-                                        {selectedClient?.name ?? t('planning_client_unknown')}
-                                    </p>
-                                )}
-                                <div className="mt-4 flex flex-wrap items-end gap-3">
-                                    <FilterDropdown
-                                        layout="inline"
-                                        label={t('client')}
-                                        name="clientFilter"
-                                        options={clientFilterOptions}
-                                        value={clientFilter}
-                                        onChange={(_, value) => setClientFilter(value)}
-                                        disabled={clients.length === 0}
-                                        selectClassName={clientFilterSelectClass}
-                                    />
-                                    <div
-                                        className={isPlanningLocked ? 'hidden' : 'relative inline-flex shrink-0'}
-                                        data-planning-wizard-step="generate-forecasts"
-                                    >
-                                        <div ref={forecastPopoverRef} className="relative inline-flex shrink-0">
-                                            <TooltipHint
-                                                label={
-                                                    !canEditPlanning
-                                                        ? t('tooltip_no_edit_permission')
-                                                        : generateForecastsTooltip
-                                                          ? t(generateForecastsTooltip)
-                                                          : t('planning_generate_forecasts')
-                                                }
-                                            >
-                                                <span
-                                                    className={`inline-flex ${!canGenerateForecasts || !canEditPlanning ? 'cursor-not-allowed' : ''}`}
-                                                >
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            canGenerateForecasts &&
-                                                            canEditPlanning &&
-                                                            !forecastGenerating &&
-                                                            setForecastPopoverOpen((o) => !o)
-                                                        }
-                                                        disabled={!canGenerateForecasts || !canEditPlanning || forecastGenerating}
-                                                        aria-label={t('planning_generate_forecasts')}
-                                                        aria-expanded={forecastPopoverOpen}
-                                                        aria-haspopup="true"
-                                                        className={`inline-flex h-10 items-center gap-1 rounded-lg border border-indigo-200 bg-white px-4 pr-2 text-sm font-medium text-indigo-700 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:border-indigo-700 dark:bg-gray-800 dark:text-indigo-300 dark:focus:ring-offset-gray-900 ${!canGenerateForecasts || !canEditPlanning ? 'cursor-not-allowed opacity-50 pointer-events-none' : 'hover:border-indigo-300 hover:bg-indigo-50 dark:hover:border-indigo-600 dark:hover:bg-indigo-950/40'}`}
-                                                    >
-                                                        {t('planning_generate_forecasts')}
-                                                        <ChevronDownIcon
-                                                            className={`h-4 w-4 transition-transform ${forecastPopoverOpen ? 'rotate-180' : ''}`}
-                                                        />
-                                                    </button>
-                                                </span>
-                                            </TooltipHint>
-                                            {forecastPopoverOpen && canGenerateForecasts && canEditPlanning && (
-                                                <div
-                                                    className="absolute top-full left-0 z-50 mt-1 min-w-[180px] rounded-lg border border-gray-200 bg-white py-1.5 shadow-lg dark:border-gray-600 dark:bg-gray-800"
-                                                    role="menu"
-                                                >
-                                                    {(['1m', '3m', '6m', '1y'] as ForecastPeriodKey[]).map((p) => (
-                                                        <button
-                                                            key={p}
-                                                            type="button"
-                                                            role="menuitem"
-                                                            onClick={() => handleGenerateForecasts(p)}
-                                                            disabled={forecastGenerating}
-                                                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none disabled:opacity-50 dark:text-gray-200 dark:hover:bg-indigo-900/30 dark:focus:bg-indigo-900/30"
-                                                        >
-                                                            {t(`planning_forecast_period_${p}`)}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-                                {isPlanningLocked ? (
-                                    <div className="mt-5 border-t border-indigo-200/60 pt-4 dark:border-indigo-800/50">
-                                        <p className="text-sm text-indigo-900/80 dark:text-indigo-200/90">
-                                            {t('planning_locked_overlay_intro')}
-                                        </p>
-                                        <ul className="mt-2.5 space-y-1.5 text-sm text-indigo-900/75 dark:text-indigo-200/80">
-                                            {planningEntrySteps.map((key) => (
-                                                <li key={key} className="flex items-start gap-2">
-                                                    <span className="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden>
-                                                        ✓
-                                                    </span>
-                                                    <span>{t(key)}</span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                ) : null}
-                            </div>
+                            <PlanningAgencyCentral
+                                ready={agencyPlanningLists.ready}
+                                review={agencyPlanningLists.review}
+                                globalAlerts={agencyPlanningLists.globalAlerts}
+                                t={t}
+                                onSelectClient={focusClient}
+                            />
 
-                            <div
-                                className="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-900/40"
-                                data-planning-wizard-step="planning-status"
-                            >
-                                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                                    {isPlanningLocked
-                                        ? t('planning_status_agency_title')
-                                        : t('planning_status_client_title', {
-                                              name: selectedClient?.name ?? t('planning_client_unknown'),
-                                          })}
-                                </h3>
-                                <ul className="mt-3 space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                                    {scheduleKpi.mode === 'agency' ? (
-                                        <>
-                                            <li className="flex items-start gap-2">
-                                                <span className="shrink-0" aria-hidden>
-                                                    ✅
-                                                </span>
-                                                <span>
-                                                    {t('planning_status_clients_ready', {
-                                                        n: scheduleKpi.clientsWithPlanning,
-                                                    })}
-                                                </span>
-                                            </li>
-                                            {planningIntelligenceItems.length > 0 ? (
-                                                <li className="flex items-start gap-2">
-                                                    <span className="shrink-0" aria-hidden>
-                                                        ⚡
-                                                    </span>
-                                                    <span>
-                                                        {planningIntelligenceItems.length === 1
-                                                            ? t('planning_status_clients_review_one')
-                                                            : t('planning_status_clients_review_other', {
-                                                                  n: planningIntelligenceItems.length,
-                                                              })}
-                                                    </span>
-                                                </li>
-                                            ) : null}
-                                        </>
-                                    ) : (
-                                        <>
-                                            <li className="flex items-start gap-2">
-                                                <span className="shrink-0" aria-hidden>
-                                                    ✅
-                                                </span>
-                                                <span>{t('planning_status_planned', { n: scheduleKpi.planned })}</span>
-                                            </li>
-                                            <li className="flex items-start gap-2">
-                                                <span className="shrink-0" aria-hidden>
-                                                    🎯
-                                                </span>
-                                                <span>
-                                                    {t('planning_status_goal', {
-                                                        n: scheduleKpi.goal != null ? String(scheduleKpi.goal) : '—',
-                                                    })}
-                                                </span>
-                                            </li>
-                                            <li
-                                                className={`flex items-start gap-2 ${
-                                                    scheduleKpi.missing != null && scheduleKpi.missing > 0
-                                                        ? 'font-medium text-amber-700 dark:text-amber-300'
-                                                        : ''
-                                                }`}
-                                            >
-                                                <span className="shrink-0" aria-hidden>
-                                                    📋
-                                                </span>
-                                                <span>
-                                                    {t('planning_status_missing', {
-                                                        n: scheduleKpi.missing != null ? scheduleKpi.missing : '—',
-                                                    })}
-                                                </span>
-                                            </li>
-                                            {planningIntelligenceItems.length > 0 ? (
-                                                <li className="flex items-start gap-2">
-                                                    <span className="shrink-0" aria-hidden>
-                                                        ⚡
-                                                    </span>
-                                                    <span>
-                                                        {planningIntelligenceItems.length === 1
-                                                            ? t('planning_intel_adjustments_one')
-                                                            : t('planning_intel_adjustments_other', {
-                                                                  n: planningIntelligenceItems.length,
-                                                              })}
-                                                    </span>
-                                                </li>
-                                            ) : null}
-                                        </>
-                                    )}
-                                </ul>
-                                {planningIntelligenceItems.length > 0 && !planningStatusExpanded ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => setPlanningStatusExpanded(true)}
-                                        className="mt-3 text-xs font-medium text-indigo-600 hover:underline dark:text-indigo-400"
-                                    >
-                                        {t('planning_intel_view_details')}
-                                    </button>
-                                ) : null}
-                                {planningIntelligenceItems.length === 0 ? (
-                                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">{t('planning_intel_no_alerts')}</p>
-                                ) : null}
-                                <IntelligentCentral
-                                    variant="embedded"
-                                    items={planningIntelligenceItems}
-                                    t={t}
-                                    onAction={handlePlanningIntelAction}
-                                    emptyMessageKey="planning_balanced"
-                                    expanded={planningStatusExpanded}
-                                    onExpandedChange={setPlanningStatusExpanded}
-                                />
-                            </div>
+                            <PlanningClientCard
+                                clients={clients}
+                                clientFilter={clientFilter}
+                                clientFilterOptions={clientFilterOptions}
+                                clientFilterSelectClass={clientFilterSelectClass}
+                                selectedClient={selectedClient}
+                                isLocked={isPlanningLocked}
+                                canEditPlanning={canEditPlanning}
+                                canGenerateForecasts={canGenerateForecasts}
+                                generateForecastsTooltip={generateForecastsTooltip}
+                                forecastPopoverOpen={forecastPopoverOpen}
+                                forecastGenerating={forecastGenerating}
+                                forecastPopoverRef={forecastPopoverRef}
+                                teamMembers={agencyProfile?.teamMembers ?? []}
+                                t={t}
+                                onClientFilterChange={setClientFilter}
+                                onToggleForecastPopover={() => setForecastPopoverOpen((o) => !o)}
+                                onGenerateForecasts={handleGenerateForecasts}
+                                onOpenClientTab={goToClientTab}
+                            />
 
                             <div
                                 className="relative"
-                                data-planning-wizard-step="schedule-calendar"
+                                data-planning-wizard-step="content-calendar"
                             >
                                 <div
                                     className={isPlanningLocked ? 'pointer-events-none select-none opacity-45' : undefined}

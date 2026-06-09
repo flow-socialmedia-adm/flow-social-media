@@ -9,6 +9,7 @@ import { ColorPickerPopover } from './ColorPickerPopover';
 import TooltipHint from './TooltipHint';
 import { BriefingV2ReadOnly } from './clients/briefing/BriefingV2ReadOnly';
 import { STRATEGY_TAB_BLOCKS } from '../lib/clientBriefingProgress';
+import { consumeClientDeepLink } from '../lib/planningClientNavigation';
 
 export type SectionEmpty = {
     identity: boolean;
@@ -132,6 +133,15 @@ export const ClientPresentationView: React.FC<ClientPresentationViewProps> = (pr
     } = props;
     const [activeTab, setActiveTab] = useState<TabId>('overview');
     const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+
+    useEffect(() => {
+        const link = consumeClientDeepLink(editedClient.id);
+        if (!link) return;
+        setActiveTab(link.tab);
+        if (!presentationModeForClient && !readOnly) {
+            onOpenEditSection(link.tab);
+        }
+    }, [editedClient.id, presentationModeForClient, readOnly, onOpenEditSection]);
     const [isEditingName, setIsEditingName] = useState(false);
     const [nameInputValue, setNameInputValue] = useState('');
     const nameInputRef = useRef<HTMLInputElement>(null);
