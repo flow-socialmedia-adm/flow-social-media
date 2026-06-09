@@ -25,6 +25,7 @@ import { useGoogleFont } from './useGoogleFont';
 const BrandGuideSectionEditor = lazy(() => import('./sectionEditors/BrandGuideSectionEditor').then((m) => ({ default: m.BrandGuideSectionEditor })));
 const BriefingV2StrategyEditor = lazy(() => import('./briefing/BriefingV2StrategyEditor').then((m) => ({ default: m.BriefingV2StrategyEditor })));
 import { STRATEGY_DEFAULT_EXPANDED } from './sectionEditors/strategySectionConstants';
+import { isBriefingEmpty, isBriefingStrategyTabEmpty, isBriefingPlanningTabEmpty } from '../../lib/clientBriefingProgress';
 import { BRAND_GUIDE_DEFAULT_EXPANDED } from './sectionEditors/brandGuideSectionConstants';
 import { CLIENT_DATA_DEFAULT_EXPANDED } from './sectionEditors/clientDataSectionConstants';
 import { PLANNING_DEFAULT_EXPANDED } from './sectionEditors/planningSectionConstants';
@@ -150,7 +151,11 @@ const ClientDetail: React.FC<{
         if (client.id !== lastSyncedClientIdRef.current) {
             setEditingLock(null);
             setIsContractFormDirty(false);
-            setStrategyExpandedSections({ ...STRATEGY_DEFAULT_EXPANDED });
+            setStrategyExpandedSections(
+                isBriefingEmpty(client)
+                    ? { ...STRATEGY_DEFAULT_EXPANDED, strategy: true }
+                    : { ...STRATEGY_DEFAULT_EXPANDED },
+            );
             setBrandGuideExpandedSections({ ...BRAND_GUIDE_DEFAULT_EXPANDED });
             setClientDataExpandedSections({ ...CLIENT_DATA_DEFAULT_EXPANDED });
             setPlanningExpandedSections({ ...PLANNING_DEFAULT_EXPANDED });
@@ -818,7 +823,8 @@ const ClientDetail: React.FC<{
         identity: false,
         data: !editedClient.companyName && !editedClient.legalRepresentativeName && !(editedClient.contacts?.length),
         guia: !(editedClient.brandColors?.length) && !editedClient.typography?.primaryFont && !editedClient.toneOfVoice && !(editedClient.dos?.length) && !(editedClient.donts?.length) && !(editedClient.brandAssets?.length),
-        strategy: !editedClient.toneOfVoice && !editedClient.brandGuidelines && !editedClient.objectives && !editedClient.targetAudience && !editedClient.audienceWho && !editedClient.audiencePains && !editedClient.audienceDesires && !editedClient.kpis && !editedClient.strategyNotes,
+        strategy: isBriefingStrategyTabEmpty(editedClient),
+        planning: isBriefingPlanningTabEmpty(editedClient),
         access: !(editedClient.accessCredentials?.length),
         contract: !(editedClient.contract?.services?.length),
     }), [editedClient]);

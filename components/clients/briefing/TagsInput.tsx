@@ -1,4 +1,5 @@
 import React, { useState, KeyboardEvent } from 'react';
+import { QuickSuggestionChips } from './QuickSuggestionChips';
 
 export const TagsInput: React.FC<{
     tags: string[];
@@ -6,7 +7,11 @@ export const TagsInput: React.FC<{
     placeholder?: string;
     label?: string;
     id?: string;
-}> = ({ tags, onChange, placeholder, label, id }) => {
+    suggestions?: readonly string[];
+    suggestionsLabel?: string;
+    hintText?: string;
+    removeAriaLabel?: (tag: string) => string;
+}> = ({ tags, onChange, placeholder, label, id, suggestions, suggestionsLabel, hintText, removeAriaLabel }) => {
     const [input, setInput] = useState('');
 
     const addTag = (raw: string) => {
@@ -44,7 +49,7 @@ export const TagsInput: React.FC<{
                             type="button"
                             onClick={() => onChange(tags.filter((t) => t !== tag))}
                             className="text-indigo-600 dark:text-indigo-300 hover:text-indigo-900 dark:hover:text-white leading-none"
-                            aria-label={`Remover ${tag}`}
+                            aria-label={removeAriaLabel ? removeAriaLabel(tag) : `Remover ${tag}`}
                         >
                             ×
                         </button>
@@ -61,7 +66,17 @@ export const TagsInput: React.FC<{
                     className="flex-1 min-w-[120px] text-sm bg-transparent border-0 outline-none text-gray-900 dark:text-white placeholder:text-gray-400"
                 />
             </div>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Enter ou vírgula para adicionar</p>
+            {hintText && (
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{hintText}</p>
+            )}
+            {suggestions && suggestions.length > 0 && (
+                <QuickSuggestionChips
+                    suggestions={suggestions}
+                    existing={tags}
+                    onAdd={(v) => onChange(Array.from(new Set([...tags, v])))}
+                    label={suggestionsLabel}
+                />
+            )}
         </div>
     );
 };

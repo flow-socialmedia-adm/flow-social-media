@@ -7,12 +7,15 @@ import { toUploadUrl } from '../lib/api';
 import { resolveClientImageUrl } from '../lib/clientVisual';
 import { ColorPickerPopover } from './ColorPickerPopover';
 import TooltipHint from './TooltipHint';
+import { BriefingV2ReadOnly } from './clients/briefing/BriefingV2ReadOnly';
+import { STRATEGY_TAB_BLOCKS } from '../lib/clientBriefingProgress';
 
 export type SectionEmpty = {
     identity: boolean;
     data: boolean;
     guia: boolean;
     strategy: boolean;
+    planning: boolean;
     access: boolean;
     contract: boolean;
 };
@@ -186,11 +189,11 @@ export const ClientPresentationView: React.FC<ClientPresentationViewProps> = (pr
         { key: 'data', label: t('client_data'), tabId: 'client_data' },
         { key: 'guia', label: t('brand_guide'), tabId: 'brand_guide' },
         { key: 'strategy', label: t('strategy'), tabId: 'strategy' },
-        { label: t('planejamento'), tabId: 'planning' },
+        { key: 'planning', label: t('planejamento'), tabId: 'planning' },
         { key: 'contract', label: t('contract'), tabId: 'contract' },
         { label: t('finance'), tabId: 'finance' },
     ];
-    const nextStepKey = sectionEmpty.data ? 'next_step_complete_data' : sectionEmpty.guia ? 'next_step_add_guia' : sectionEmpty.strategy ? 'next_step_add_strategy' : sectionEmpty.contract ? 'next_step_add_services' : null;
+    const nextStepKey = sectionEmpty.data ? 'next_step_complete_data' : sectionEmpty.guia ? 'next_step_add_guia' : sectionEmpty.strategy ? 'next_step_add_strategy' : sectionEmpty.planning ? 'next_step_add_planning' : sectionEmpty.contract ? 'next_step_add_services' : null;
     const formatCurrency = (value: number) => new Intl.NumberFormat(language === 'pt' ? 'pt-BR' : 'en-US', { style: 'currency', currency: editedClient.currency || 'USD' }).format(value);
 
     return (
@@ -454,7 +457,7 @@ export const ClientPresentationView: React.FC<ClientPresentationViewProps> = (pr
             {!presentationModeForClient && (
                 <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex flex-wrap gap-2 pb-2">
-                        {sectionsConfig.map(({ label, tabId }) => (
+                        {sectionsConfig.map(({ key, label, tabId }) => (
                             <button
                                 key={tabId}
                                 type="button"
@@ -469,9 +472,12 @@ export const ClientPresentationView: React.FC<ClientPresentationViewProps> = (pr
                                         proceed();
                                     }
                                 }}
-                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tabId ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5 ${activeTab === tabId ? 'bg-indigo-600 text-white' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                             >
                                 {label}
+                                {key && sectionEmpty[key] && activeTab !== tabId && (
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" aria-hidden />
+                                )}
                             </button>
                         ))}
                     </div>
@@ -569,76 +575,12 @@ export const ClientPresentationView: React.FC<ClientPresentationViewProps> = (pr
                     renderSectionEditor('strategy')
                 ) : (
                     <section className={PRESENTATION_SECTION_STYLE}>
-                        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">{t('strategy')}</h3>
-                        <div className="text-sm text-gray-700 dark:text-gray-300 space-y-3 [&_ul]:list-disc [&_ol]:list-decimal [&_ul]:pl-5 [&_ol]:pl-5 [&_strong]:font-semibold [&_em]:italic">
-                            {editedClient.brandGuidelines && (
-                                <p>
-                                    <span className="font-medium text-gray-500">{t('directives')}:</span>{' '}
-                                    {editedClient.brandGuidelines.includes('<') ? (
-                                        <span dangerouslySetInnerHTML={{ __html: editedClient.brandGuidelines }} />
-                                    ) : (
-                                        <span className="whitespace-pre-wrap">{editedClient.brandGuidelines}</span>
-                                    )}
-                                </p>
-                            )}
-                            {editedClient.toneOfVoice && (
-                                <p>
-                                    <span className="font-medium text-gray-500">{t('tone_of_voice')}:</span>{' '}
-                                    {editedClient.toneOfVoice.includes('<') ? (
-                                        <span dangerouslySetInnerHTML={{ __html: editedClient.toneOfVoice }} />
-                                    ) : (
-                                        <span className="whitespace-pre-wrap">{editedClient.toneOfVoice}</span>
-                                    )}
-                                </p>
-                            )}
-                            {(editedClient.audienceWho || editedClient.targetAudience || editedClient.audiencePains || editedClient.audienceDesires) && (
-                                <div>
-                                    <span className="font-medium text-gray-500">{t('target_audience')}:</span>
-                                    <div className="pl-2 border-l-2 border-gray-200 dark:border-gray-600 mt-1 space-y-1">
-                                        {(editedClient.audienceWho || editedClient.targetAudience) && (
-                                            <p>
-                                                <span className="text-xs text-gray-500">{t('audience_who')}:</span>{' '}
-                                                {(editedClient.audienceWho || editedClient.targetAudience || '').includes('<') ? (
-                                                    <span dangerouslySetInnerHTML={{ __html: editedClient.audienceWho || editedClient.targetAudience || '' }} />
-                                                ) : (
-                                                    <span className="whitespace-pre-wrap">{editedClient.audienceWho || editedClient.targetAudience}</span>
-                                                )}
-                                            </p>
-                                        )}
-                                        {editedClient.audiencePains && (
-                                            <p>
-                                                <span className="text-xs text-gray-500">{t('audience_pains')}:</span>{' '}
-                                                {editedClient.audiencePains.includes('<') ? <span dangerouslySetInnerHTML={{ __html: editedClient.audiencePains }} /> : <span className="whitespace-pre-wrap">{editedClient.audiencePains}</span>}
-                                            </p>
-                                        )}
-                                        {editedClient.audienceDesires && (
-                                            <p>
-                                                <span className="text-xs text-gray-500">{t('audience_desires')}:</span>{' '}
-                                                {editedClient.audienceDesires.includes('<') ? <span dangerouslySetInnerHTML={{ __html: editedClient.audienceDesires }} /> : <span className="whitespace-pre-wrap">{editedClient.audienceDesires}</span>}
-                                            </p>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                            {editedClient.objectives && (
-                                <p>
-                                    <span className="font-medium text-gray-500">{t('objectives')}:</span>{' '}
-                                    {editedClient.objectives.includes('<') ? <span dangerouslySetInnerHTML={{ __html: editedClient.objectives }} /> : <span className="whitespace-pre-wrap">{editedClient.objectives}</span>}
-                                </p>
-                            )}
-                            {editedClient.kpis && (
-                                <p>
-                                    <span className="font-medium text-gray-500">{t('kpis')}:</span>{' '}
-                                    {editedClient.kpis.includes('<') ? <span dangerouslySetInnerHTML={{ __html: editedClient.kpis }} /> : <span className="whitespace-pre-wrap">{editedClient.kpis}</span>}
-                                </p>
-                            )}
-                            {editedClient.strategyNotes && (
-                                <p>
-                                    <span className="font-medium text-gray-500">{t('strategy_notes')}:</span>{' '}
-                                    {editedClient.strategyNotes.includes('<') ? <span dangerouslySetInnerHTML={{ __html: editedClient.strategyNotes }} /> : <span className="whitespace-pre-wrap">{editedClient.strategyNotes}</span>}
-                                </p>
-                            )}
-                        </div>
+                        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-4">{t('strategy')}</h3>
+                        <BriefingV2ReadOnly
+                            client={editedClient}
+                            t={t}
+                            blocks={[...STRATEGY_TAB_BLOCKS]}
+                        />
                     </section>
                 )
                 )}
@@ -647,29 +589,14 @@ export const ClientPresentationView: React.FC<ClientPresentationViewProps> = (pr
                     renderSectionEditor('planning')
                 ) : (
                     <section className={PRESENTATION_SECTION_STYLE}>
-                        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">{t('planejamento')}</h3>
-                        <div className="text-sm text-gray-700 dark:text-gray-300 space-y-2">
-                            {editedClient.postFrequency && (
-                                <p><span className="font-medium text-gray-500">{t('post_frequency')}:</span> {editedClient.postFrequency}</p>
-                            )}
-                            {(editedClient.preferredPostDays?.length ?? 0) > 0 && (
-                                <p><span className="font-medium text-gray-500">{t('preferred_post_days')}:</span>{' '}
-                                    {editedClient.preferredPostDays!.map((d) => t(PRESENTATION_PLANNING_DAY_I18N[d] || 'day_mon')).join(', ')}
-                                </p>
-                            )}
-                            {editedClient.planningAccountOwner && (
-                                <p>
-                                    <span className="font-medium text-gray-500">{t('planning_account_owner_label')}:</span>{' '}
-                                    {resolvePlanningAccountOwnerDisplay(editedClient.planningAccountOwner, teamMembers)}
-                                </p>
-                            )}
-                            {!editedClient.postFrequency && !(editedClient.preferredPostDays?.length) && !editedClient.planningAccountOwner && !editedClient.kpis && (
-                                <p className="text-gray-500 dark:text-gray-400">{t('planning_presentation_empty')}</p>
-                            )}
-                            {editedClient.kpis && (
-                                <p><span className="font-medium text-gray-500">{t('planning_kpis_label')}:</span> <span className="whitespace-pre-wrap">{editedClient.kpis}</span></p>
-                            )}
-                        </div>
+                        <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-4">{t('planejamento')}</h3>
+                        <BriefingV2ReadOnly
+                            client={editedClient}
+                            t={t}
+                            blocks={['planning']}
+                            teamMembers={teamMembers}
+                            resolveOwnerDisplay={resolvePlanningAccountOwnerDisplay}
+                        />
                     </section>
                 )
                 )}

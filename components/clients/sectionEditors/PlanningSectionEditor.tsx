@@ -10,6 +10,7 @@ import { getEligibleAgencyOwners } from '../../../lib/agencyOperational';
 import { UnsavedChangesBar } from '../UnsavedChangesBar';
 import { ClientOwnerPreferencesPanel } from '../ClientOwnerPreferencesPanel';
 import { BriefingBlockSection } from '../briefing/BriefingBlockSection';
+import { BriefingTabProgressHeader } from '../briefing/BriefingGlobalProgress';
 
 const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 type DayKey = (typeof DAY_ORDER)[number];
@@ -170,6 +171,8 @@ export const PlanningSectionEditor: React.FC<PlanningSectionEditorProps> = ({
                     />
                 </div>
             )}
+
+            <BriefingTabProgressHeader client={editedClient} t={t} tab="planning" />
 
             <BriefingBlockSection
                 title={t('briefing_block_planning_title')}

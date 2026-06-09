@@ -1,33 +1,9 @@
 import React, { useMemo } from 'react';
 import type { Client, Task } from '../../../types';
-import { getTaskDisplayDate } from '../../../lib/utils';
+import { getTaskDisplayDate, buildPostFrequency } from '../../../lib/utils';
 import { CalendarIcon, ClipboardListIcon, ClockIcon, CheckCircleIcon, DollarSignIcon, AlertTriangleIcon } from '../../icons';
 import TooltipHint from '../../TooltipHint';
-
-const STRATEGY_ESSENTIAL_TOTAL = 10;
-
-function computeFilledCount(c: Client | null | undefined): number {
-    if (!c) return 0;
-    const str = (v: unknown) => (typeof v === 'string' ? (v as string).trim() : '');
-    let count = 0;
-    if (str(c.brandHistory || c.brandGuidelines)) count++;
-    if (str(c.brandValues)) count++;
-    if (str(c.brandMission)) count++;
-    if (str(c.brandVision)) count++;
-    if (str(c.mainServices)) count++;
-    if (str(c.differentiators)) count++;
-    if (str(c.howWantToBePerceived)) count++;
-    const personas = Array.isArray(c.strategyPersonas) ? c.strategyPersonas : [];
-    const hasPublico = str(c.audienceAgeRange) || str(c.audienceRegion) || str(c.audienceGeneralProfile) ||
-        personas.some((p: { name?: string }) => (p?.name ?? '').trim());
-    if (hasPublico) count++;
-    const hasObjetivos = str(c.mainProfileObjective) || str(c.momentObjective) || str(c.monthlyObjective);
-    if (hasObjetivos) count++;
-    const pillars = Array.isArray(c.strategyContentPillars) ? c.strategyContentPillars : [];
-    const hasPillar = pillars.some((p: { name?: string }) => (p?.name ?? '').trim());
-    if (hasPillar) count++;
-    return count;
-}
+import { BriefingGlobalProgress } from '../briefing/BriefingGlobalProgress';
 
 const DAY_I18N: Record<string, string> = {
     mon: 'day_mon', tue: 'day_tue', wed: 'day_wed', thu: 'day_thu',
@@ -101,9 +77,19 @@ export const OverviewSection: React.FC<OverviewSectionProps> = ({
     const approvalIds = new Set(wf.filter((s) => /aprovacao|aprovado/i.test(s.id)).map((s) => s.id));
     const publishedIds = new Set(wf.filter((s) => /publicado|agendado/i.test(s.id)).map((s) => s.id));
 
-    const filledCount = useMemo(() => computeFilledCount(editedClient), [editedClient]);
-    const pillarCount = editedClient.strategyContentPillars?.length ?? 0;
-    const monthlyObj = editedClient.monthlyObjective || editedClient.momentObjective || '';
+    const briefingGlobal = useMemo(() => getBriefingGlobalProgress(editedClient), [editedClient]);
+    const briefing = useMemo(() => editedClient.briefingV2 ?? resolveBriefingV2(editedClient), [editedClient]);
+    const pillarTags = briefing.content.pillarsTags.filter((p) => p.trim());
+    const monthFocus = briefing.content.monthFocus?.trim() || '';
+
+    const planningFreqLabel = useMemo(() => {
+        const freq = briefing.planning.frequency;
+        if (freq.variable) return t('planning_frequency_variable');
+        if (freq.quantity && freq.period) return buildPostFrequency(freq.quantity, freq.period);
+        return '';
+    }, [briefing, t]);
+
+    const preferredDays = (briefing.planning.preferredPostDays ?? []).slice().sort();
 
     const postsThisMonth = useMemo(() => {
         const start = `${year}-${String(month + 1).padStart(2, '0')}-01`;
@@ -149,16 +135,15 @@ export const OverviewSection: React.FC<OverviewSectionProps> = ({
     const healthScore = useMemo(() => {
         let score = 0;
         const max = 4;
-        if (filledCount >= 7) score += 1;
-        const hasPlanning = !!(editedClient.postFrequency?.trim() || editedClient.postFrequencyVariable || (editedClient.preferredPostDays?.length ?? 0) > 0);
+        if (briefingGlobal.percent >= 50) score += 1;
+        const hasPlanning = briefingGlobal.blocks.planning.filled > 0;
         if (hasPlanning) score += 1;
         const tasksOnTrack = (quickOverview.tarefasAtrasadas ?? 0) === 0 && (quickOverview.postsAtrasados ?? 0) === 0;
         if (tasksOnTrack) score += 1;
         if (postsThisMonth > 0 || quickOverview.postsAtivos > 0) score += 1;
         return Math.round((score / max) * 100);
-    }, [filledCount, editedClient.postFrequency, editedClient.postFrequencyVariable, editedClient.preferredPostDays, quickOverview.tarefasAtrasadas, quickOverview.postsAtrasados, quickOverview.postsAtivos, postsThisMonth]);
+    }, [briefingGlobal, quickOverview.tarefasAtrasadas, quickOverview.postsAtrasados, quickOverview.postsAtivos, postsThisMonth]);
 
-    const preferredDays = (editedClient.preferredPostDays ?? []).slice().sort();
     const statusConta = quickOverview.statusConta ?? 'em_dia';
 
     const formatDate = (d: string) => new Date(d + 'T00:00').toLocaleDateString(language === 'pt' ? 'pt-BR' : 'en-US', { day: '2-digit', month: 'short' });
@@ -228,6 +213,8 @@ export const OverviewSection: React.FC<OverviewSectionProps> = ({
                 </div>
             </div>
 
+            <BriefingGlobalProgress client={editedClient} t={t} showBlocks />
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* Saúde da conta */}
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
@@ -258,45 +245,14 @@ export const OverviewSection: React.FC<OverviewSectionProps> = ({
                         </div>
                     </div>
                 </div>
-
-                {/* Estratégia resumo */}
-                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('overview_strategy_title')}</h3>
-                    <div className="space-y-3">
-                        <div>
-                            <div className="flex justify-between text-xs mb-1">
-                                <span className="text-gray-600 dark:text-gray-400">{t('overview_strategy_filled')}</span>
-                                <span className="font-medium text-gray-900 dark:text-white">{filledCount}/{STRATEGY_ESSENTIAL_TOTAL}</span>
-                            </div>
-                            <div className="h-2 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
-                                <div className="h-full bg-indigo-500 rounded-full transition-all" style={{ width: `${(filledCount / STRATEGY_ESSENTIAL_TOTAL) * 100}%` }} />
-                            </div>
-                        </div>
-                        {pillarCount > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                                {(editedClient.strategyContentPillars ?? []).slice(0, 5).map((p) => (
-                                    <span key={p.id} className="px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                                        {p.name || '-'}
-                                    </span>
-                                ))}
-                                {pillarCount > 5 && <span className="text-xs text-gray-500">+{pillarCount - 5}</span>}
-                            </div>
-                        )}
-                        {monthlyObj && (
-                            <TooltipHint label={monthlyObj} className="block w-full min-w-0">
-                                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">{monthlyObj}</p>
-                            </TooltipHint>
-                        )}
-                    </div>
-                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Planejamento */}
+                {/* Planejamento resumo (V2) */}
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5">
                     <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">{t('overview_planning_title')}</h3>
                     <div className="space-y-2 text-sm">
-                        {editedClient.postFrequency ? <p><span className="text-gray-500 dark:text-gray-400">{t('post_frequency')}:</span> {editedClient.postFrequency}</p> : editedClient.postFrequencyVariable ? <p><span className="text-gray-500 dark:text-gray-400">{t('post_frequency')}:</span> {t('planning_manual')}</p> : null}
+                        {planningFreqLabel ? <p><span className="text-gray-500 dark:text-gray-400">{t('post_frequency')}:</span> {planningFreqLabel}</p> : null}
                         {preferredDays.length > 0 && (
                             <p>
                                 <span className="text-gray-500 dark:text-gray-400">{t('preferred_post_days')}:</span>{' '}
@@ -305,10 +261,26 @@ export const OverviewSection: React.FC<OverviewSectionProps> = ({
                         )}
                         <p>
                             <span className="text-gray-500 dark:text-gray-400">{t('planning_approval_required')}</span>{' '}
-                            {editedClient.planningApprovalRequired === true ? t('yes') : editedClient.planningApprovalRequired === false ? t('no') : '—'}
+                            {briefing.planning.operation.approvalRequired === true ? t('yes') : briefing.planning.operation.approvalRequired === false ? t('no') : '—'}
                         </p>
-                        {!editedClient.postFrequency && !editedClient.postFrequencyVariable && preferredDays.length === 0 && editedClient.planningApprovalRequired === undefined && (
+                        {!planningFreqLabel && preferredDays.length === 0 && briefing.planning.operation.approvalRequired === undefined && (
                             <p className="text-gray-500 dark:text-gray-400">{t('overview_planning_empty')}</p>
+                        )}
+                        {pillarTags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 pt-1">
+                                {pillarTags.slice(0, 5).map((p) => (
+                                    <span key={p} className="px-2 py-0.5 text-xs rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                                        {p}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                        {monthFocus && (
+                            <TooltipHint label={monthFocus} className="block w-full min-w-0">
+                                <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                                    <span className="font-medium text-gray-500">{t('briefing_month_focus')}:</span> {monthFocus}
+                                </p>
+                            </TooltipHint>
                         )}
                     </div>
                 </div>

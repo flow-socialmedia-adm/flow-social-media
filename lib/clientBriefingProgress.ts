@@ -8,6 +8,17 @@ export interface BlockProgress {
     labelKey: string;
 }
 
+export interface BriefingGlobalProgress {
+    filled: number;
+    total: number;
+    percent: number;
+    blocks: Record<BriefingBlock, BlockProgress>;
+}
+
+const BLOCK_ORDER: BriefingBlock[] = ['strategy', 'audience', 'communication', 'content', 'planning'];
+
+const STRATEGY_TAB_BLOCKS: BriefingBlock[] = ['strategy', 'audience', 'communication', 'content'];
+
 const BLOCK_LABEL_KEYS: Record<BriefingBlock, string> = {
     strategy: 'briefing_block_strategy',
     audience: 'briefing_block_audience',
@@ -115,3 +126,48 @@ export function getAllBriefingBlockProgress(client: Client): Record<BriefingBloc
         planning: getBriefingBlockProgressFromBriefing(briefing, 'planning'),
     };
 }
+
+/** Progresso global agregado — fonte única para Overview, Estratégia e Planejamento. */
+export function getBriefingGlobalProgress(client: Client): BriefingGlobalProgress {
+    const blocks = getAllBriefingBlockProgress(client);
+    let filled = 0;
+    let total = 0;
+    for (const block of BLOCK_ORDER) {
+        filled += blocks[block].filled;
+        total += blocks[block].total;
+    }
+    const percent = total > 0 ? Math.round((filled / total) * 100) : 0;
+    return { filled, total, percent, blocks };
+}
+
+export function isBriefingBlockEmpty(client: Client, block: BriefingBlock): boolean {
+    const p = getBriefingBlockProgress(client, block);
+    return p.filled === 0;
+}
+
+/** Briefing sem nenhum campo preenchido (onboarding). */
+export function isBriefingEmpty(client: Client): boolean {
+    return getBriefingGlobalProgress(client).filled === 0;
+}
+
+/** Aba Estratégia vazia — nenhum dado nos 4 blocos da aba. */
+export function isBriefingStrategyTabEmpty(client: Client): boolean {
+    return STRATEGY_TAB_BLOCKS.every((b) => isBriefingBlockEmpty(client, b));
+}
+
+/** Aba Planejamento vazia. */
+export function isBriefingPlanningTabEmpty(client: Client): boolean {
+    return isBriefingBlockEmpty(client, 'planning');
+}
+
+export type BriefingOverallStatus = 'empty' | 'started' | 'partial' | 'complete';
+
+export function getBriefingOverallStatus(client: Client): BriefingOverallStatus {
+    const { filled, total, percent } = getBriefingGlobalProgress(client);
+    if (filled === 0) return 'empty';
+    if (filled === total) return 'complete';
+    if (percent >= 50) return 'partial';
+    return 'started';
+}
+
+export { BLOCK_ORDER, STRATEGY_TAB_BLOCKS };

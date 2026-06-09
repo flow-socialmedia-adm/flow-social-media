@@ -9,6 +9,16 @@ import { BriefingBlockSection, SimpleTextarea } from './BriefingBlockSection';
 import { TagsInput } from './TagsInput';
 import { MarketReferencesEditor } from './MarketReferencesEditor';
 import { PersonasEditor } from './PersonasEditor';
+import { BriefingTabProgressHeader } from './BriefingGlobalProgress';
+import { isBriefingEmpty } from '../../../lib/clientBriefingProgress';
+import {
+    BRIEFING_PILLAR_SUGGESTIONS,
+    BRIEFING_PAINS_SUGGESTIONS,
+    BRIEFING_DESIRES_SUGGESTIONS,
+    BRIEFING_OBJECTIONS_SUGGESTIONS,
+    BRIEFING_TONE_SUGGESTIONS,
+} from './briefingQuickSuggestions';
+import { QuickTextSuggestionChips } from './QuickSuggestionChips';
 
 const PRIMARY_CTA_OPTIONS: PrimaryCta[] = [
     'schedule_consultation',
@@ -71,6 +81,9 @@ export const BriefingV2StrategyEditor: React.FC<BriefingV2StrategyEditorProps> =
     };
 
     const progressLabel = t('briefing_progress_label');
+    const tagsHint = t('briefing_tags_hint');
+    const suggestionsLabel = t('briefing_suggestions_label');
+    const showOnboarding = isBriefingEmpty(editedClient);
 
     return (
         <div className="space-y-6">
@@ -83,6 +96,15 @@ export const BriefingV2StrategyEditor: React.FC<BriefingV2StrategyEditorProps> =
                         feedback={saveBarMessage ?? undefined}
                         onFeedbackDismiss={onFeedbackDismiss}
                     />
+                </div>
+            )}
+
+            <BriefingTabProgressHeader client={editedClient} t={t} tab="strategy" />
+
+            {showOnboarding && (
+                <div className="rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/60 dark:bg-indigo-950/30 px-4 py-3">
+                    <p className="text-sm font-medium text-indigo-900 dark:text-indigo-200">{t('briefing_onboarding_title')}</p>
+                    <p className="mt-1 text-xs text-indigo-700/90 dark:text-indigo-300/90">{t('briefing_onboarding_desc')}</p>
                 </div>
             )}
 
@@ -107,6 +129,8 @@ export const BriefingV2StrategyEditor: React.FC<BriefingV2StrategyEditorProps> =
                     tags={briefing.strategy.mainServicesTags}
                     onChange={(tags) => patch((b) => ({ ...b, strategy: { ...b.strategy, mainServicesTags: tags } }))}
                     placeholder={t('briefing_tags_placeholder')}
+                    hintText={tagsHint}
+                    removeAriaLabel={(tag) => t('briefing_remove_tag', { tag })}
                 />
                 <SimpleTextarea
                     label={t('briefing_differentiators')}
@@ -155,18 +179,30 @@ export const BriefingV2StrategyEditor: React.FC<BriefingV2StrategyEditorProps> =
                     tags={briefing.audience.painsTags}
                     onChange={(tags) => patch((b) => ({ ...b, audience: { ...b.audience, painsTags: tags } }))}
                     placeholder={t('briefing_tags_placeholder')}
+                    suggestions={BRIEFING_PAINS_SUGGESTIONS}
+                    suggestionsLabel={suggestionsLabel}
+                    hintText={tagsHint}
+                    removeAriaLabel={(tag) => t('briefing_remove_tag', { tag })}
                 />
                 <TagsInput
                     label={t('briefing_desires_tags')}
                     tags={briefing.audience.desiresTags}
                     onChange={(tags) => patch((b) => ({ ...b, audience: { ...b.audience, desiresTags: tags } }))}
                     placeholder={t('briefing_tags_placeholder')}
+                    suggestions={BRIEFING_DESIRES_SUGGESTIONS}
+                    suggestionsLabel={suggestionsLabel}
+                    hintText={tagsHint}
+                    removeAriaLabel={(tag) => t('briefing_remove_tag', { tag })}
                 />
                 <TagsInput
                     label={t('briefing_objections_tags')}
                     tags={briefing.audience.objectionsTags}
                     onChange={(tags) => patch((b) => ({ ...b, audience: { ...b.audience, objectionsTags: tags } }))}
                     placeholder={t('briefing_tags_placeholder')}
+                    suggestions={BRIEFING_OBJECTIONS_SUGGESTIONS}
+                    suggestionsLabel={suggestionsLabel}
+                    hintText={tagsHint}
+                    removeAriaLabel={(tag) => t('briefing_remove_tag', { tag })}
                 />
                 <div>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
@@ -196,11 +232,19 @@ export const BriefingV2StrategyEditor: React.FC<BriefingV2StrategyEditorProps> =
                     placeholder={t('briefing_tone_of_voice_placeholder')}
                     rows={3}
                 />
+                <QuickTextSuggestionChips
+                    suggestions={BRIEFING_TONE_SUGGESTIONS}
+                    currentValue={briefing.communication.toneOfVoice}
+                    onSelect={(v) => patch((b) => ({ ...b, communication: { ...b.communication, toneOfVoice: v } }))}
+                    label={suggestionsLabel}
+                />
                 <TagsInput
                     label={t('briefing_brand_words')}
                     tags={briefing.communication.brandWordsTags}
                     onChange={(tags) => patch((b) => ({ ...b, communication: { ...b.communication, brandWordsTags: tags } }))}
                     placeholder={t('briefing_tags_placeholder')}
+                    hintText={tagsHint}
+                    removeAriaLabel={(tag) => t('briefing_remove_tag', { tag })}
                 />
                 <div>
                     <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
@@ -268,6 +312,10 @@ export const BriefingV2StrategyEditor: React.FC<BriefingV2StrategyEditorProps> =
                     tags={briefing.content.pillarsTags}
                     onChange={(tags) => patch((b) => ({ ...b, content: { ...b.content, pillarsTags: tags } }))}
                     placeholder={t('briefing_tags_placeholder')}
+                    suggestions={BRIEFING_PILLAR_SUGGESTIONS}
+                    suggestionsLabel={t('briefing_pillars_suggestions_label')}
+                    hintText={tagsHint}
+                    removeAriaLabel={(tag) => t('briefing_remove_tag', { tag })}
                 />
                 <SimpleTextarea
                     label={t('briefing_strategy_notes')}
