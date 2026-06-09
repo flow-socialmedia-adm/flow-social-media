@@ -479,7 +479,7 @@ const DashboardPage: React.FC = () => {
     const tourSteps = useMemo(() => [
         {
             id: 'overview',
-            title: 'Bem-vindo ao Flow ERP!',
+            title: 'Bem-vindo ao Flow Social Media!',
             content: 'Este é o seu dashboard. Aqui você tem uma visão geral de tudo: finanças, tarefas e clientes.',
         },
         {

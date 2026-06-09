@@ -32,7 +32,7 @@ const TasksOnboarding: React.FC<TasksOnboardingProps> = ({ isOpen, onComplete, o
       content: (
         <div className="space-y-4">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            No Flow ERP, você trabalha com dois tipos de itens:
+            No Flow Social Media, você trabalha com dois tipos de itens:
           </p>
           <div className="space-y-3">
             <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">

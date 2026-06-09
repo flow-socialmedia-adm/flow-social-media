@@ -3,6 +3,7 @@ import { AppContext } from '../contexts/AppContext';
 import { AuthContext } from '../contexts/AuthContext';
 import { EyeIcon, EyeOffIcon, GoogleIcon } from './icons';
 import PhoneInput from './PhoneInput';
+import { FlowBrandLogo } from './brand/FlowBrandLogo';
 
 interface SignupPageProps {
 	onSignup: () => void;
@@ -128,7 +129,9 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSignup, onNavigateToLogin, on
 	return (
 		<div className="min-h-screen bg-white dark:bg-gray-900 flex">
 			<div className="hidden lg:flex w-1/2 bg-[#4285F4] relative items-center justify-center p-12 text-white flex-col">
-				<div className="absolute top-8 left-8 text-2xl font-bold">Flow</div>
+				<div className="absolute top-8 left-8">
+					<FlowBrandLogo variant="full" height={48} surface="dark" />
+				</div>
 				<div className="z-10 text-center">
 					<h1 className="text-5xl font-bold mb-4">{t('create_account')}</h1>
 					<p className="text-lg max-w-sm">Crie sua agência e ganhe 10 dias de teste.</p>
@@ -139,8 +142,8 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSignup, onNavigateToLogin, on
 
 			<div className="w-full lg:w-1/2 flex items-center justify-center p-6 sm:p-12">
 				<div className="w-full max-w-md">
-					<div className="text-center mb-8 lg:hidden">
-						<h1 className="text-4xl font-bold text-indigo-600 dark:text-indigo-400">Flow</h1>
+					<div className="flex justify-center mb-8 lg:hidden">
+						<FlowBrandLogo variant="full" height={48} />
 					</div>
 					<h2 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">Criar conta</h2>
 					<p className="text-gray-600 dark:text-gray-400 mb-8">

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { apiGetPublic, apiPostPublic } from '../lib/api';
+import { FlowBrandLogo } from './brand/FlowBrandLogo';
 
 const InviteAcceptPage: React.FC = () => {
 	const [searchParams] = useSearchParams();
@@ -104,7 +105,8 @@ const InviteAcceptPage: React.FC = () => {
 	}
 
 	return (
-		<div className="flex min-h-screen items-center justify-center bg-gray-50 p-6 dark:bg-gray-900">
+		<div className="flex min-h-screen flex-col items-center justify-center gap-6 bg-gray-50 p-6 dark:bg-gray-900">
+			<FlowBrandLogo variant="full" height={44} />
 			<form
 				onSubmit={(e) => void submit(e)}
 				className="w-full max-w-md space-y-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800"

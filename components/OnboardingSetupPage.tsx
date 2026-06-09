@@ -79,7 +79,7 @@ const OnboardingSetupPage: React.FC<OnboardingSetupPageProps> = ({
                 Você trabalha sozinho(a) ou em equipe?
               </h2>
               <p className="text-gray-600 dark:text-gray-400">
-                Isso ajuda a personalizar sua experiência no Flow ERP
+                Isso ajuda a personalizar sua experiência no Flow Social Media
               </p>
             </div>
 

@@ -2,6 +2,7 @@ import React, { useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
 import { CalendarIcon, ZapIcon, UsersIcon, CheckIcon } from './icons';
+import { FlowBrandLogo } from './brand/FlowBrandLogo';
 
 interface LandingPageProps {
   onNavigateToLogin: () => void;
@@ -28,7 +29,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToLogin, onNavigate
             {/* Header */}
             <header className="fixed top-0 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm z-50">
                 <div className="container mx-auto px-6 py-4 flex justify-between items-center">
-                    <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">Flow</span>
+                    <FlowBrandLogo variant="full" height={44} />
                     <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-4">
                         <Link
                             to="/landing-v2"

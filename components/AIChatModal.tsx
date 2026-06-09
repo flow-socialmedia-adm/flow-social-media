@@ -1,7 +1,8 @@
 import React, { useState, useContext, useRef, useEffect } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { ChatMessage } from '../types';
-import { XIcon, SendIcon, SparklesIcon } from './icons';
+import { XIcon, SendIcon } from './icons';
+import { FlowBrandLogo } from './brand/FlowBrandLogo';
 import { GoogleGenAI, Chat } from '@google/genai';
 
 interface AIChatModalProps {
@@ -38,7 +39,7 @@ const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => {
                     return `- ${t.title} for ${client ? client.name : 'General Task'} due on ${t.date} with status ${t.statusId}`;
                 }).join('\n');
 
-                const systemInstruction = `You are an intelligent assistant for the Flow app, a CRM for social media agencies. Your name is Flow AI. 
+                const systemInstruction = `You are an intelligent assistant for Flow Social Media, a CRM for social media agencies. Your name is Flow AI. 
                 You can answer questions about social media strategies, help brainstorm content ideas, and analyze task data. Be helpful, friendly, and concise.
                 When answering, you can use markdown for lists, bolding, etc.
                 Current user's task summary for context:
@@ -101,7 +102,7 @@ const AIChatModal: React.FC<AIChatModalProps> = ({ isOpen, onClose }) => {
             <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-2xl h-[80vh] flex flex-col">
                 <header className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-2">
-                        <SparklesIcon className="w-6 h-6 text-indigo-500" />
+                        <FlowBrandLogo variant="symbol" height={28} />
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('chat_with_ai')}</h2>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700">

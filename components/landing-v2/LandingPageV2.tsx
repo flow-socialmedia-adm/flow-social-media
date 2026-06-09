@@ -8,6 +8,7 @@ import {
 	UsersIcon,
 	ZapIcon,
 } from '../icons';
+import { FlowBrandLogo } from '../brand/FlowBrandLogo';
 
 export type LandingPageV2Props = {
 	onNavigateToSignup: () => void;
@@ -40,9 +41,10 @@ export const LandingPageV2: React.FC<LandingPageV2Props> = ({
 					<button
 						type="button"
 						onClick={onBackToClassicLanding}
-						className="text-xl font-bold tracking-tight text-indigo-600 transition-colors hover:text-indigo-700 dark:text-indigo-400 dark:hover:text-indigo-300"
+						className="transition-opacity hover:opacity-90"
+						aria-label={t('appName')}
 					>
-						Flow
+						<FlowBrandLogo variant="full" height={44} />
 					</button>
 					<div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
 						<button
@@ -384,7 +386,7 @@ export const LandingPageV2: React.FC<LandingPageV2Props> = ({
 
 			<footer className="border-t border-gray-200 bg-gray-50 py-8 dark:border-gray-800 dark:bg-gray-950">
 				<div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 text-center text-sm text-gray-500 sm:flex-row sm:text-left dark:text-gray-400">
-					<p>© {new Date().getFullYear()} Flow</p>
+					<p>{t('landing_footer_text').replace('2024', String(new Date().getFullYear()))}</p>
 					<button
 						type="button"
 						onClick={onBackToClassicLanding}

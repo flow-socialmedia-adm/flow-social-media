@@ -3,7 +3,8 @@ import React, { useContext, useState, useEffect, useRef } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import { toUploadUrl } from '../lib/api';
 import { Language } from '../types';
-import { HomeIcon, CalendarIcon, UsersIcon, DollarSignIcon, StarIcon, LayoutGridIcon, CheckSquareIcon, ClipboardListIcon, GlobeIcon, SparklesIcon, EditIcon, SettingsIcon } from './icons';
+import { HomeIcon, CalendarIcon, UsersIcon, DollarSignIcon, StarIcon, LayoutGridIcon, CheckSquareIcon, ClipboardListIcon, GlobeIcon, EditIcon, SettingsIcon } from './icons';
+import { FlowBrandLogo } from './brand/FlowBrandLogo';
 import ProfileMenu from './ProfileMenu';
 
 interface SidebarProps {
@@ -125,9 +126,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 className={`fixed inset-y-0 left-0 z-30 flex h-screen min-h-0 w-64 flex-col bg-white dark:bg-gray-800 shadow-[2px_0_20px_-4px_rgba(15,23,42,0.08)] dark:shadow-[2px_0_24px_-4px_rgba(0,0,0,0.45)] transition-transform duration-300 ease-in-out transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
             >
                 <div className="flex shrink-0 items-center px-3 pb-4 pt-5">
-                    <div className="flex items-center gap-2.5 pl-4">
-                        <SparklesIcon className="h-6 w-6 shrink-0 text-indigo-600 dark:text-indigo-400" aria-hidden />
-                        <span className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white">Flow</span>
+                    <div className="pl-4">
+                        <FlowBrandLogo variant="full" height={44} />
                     </div>
                 </div>
 

@@ -9,7 +9,7 @@ type Translations = {
 
 export const translations: Translations = {
   // General
-  "appName": { "pt": "Flow", "en": "Flow", "es": "Flow" },
+  "appName": { "pt": "Flow Social Media", "en": "Flow Social Media", "es": "Flow Social Media" },
   "tagline": { "pt": "Sua agência, mais inteligente.", "en": "Your agency, smarter.", "es": "Tu agencia, más inteligente." },
   "yes": { "pt": "Sim", "en": "Yes", "es": "Sí" },
   "no": { "pt": "Não", "en": "No", "es": "No" },
@@ -27,7 +27,7 @@ export const translations: Translations = {
   "landing_feature_2_desc": { "pt": "Crie e adapte os status das tarefas para corresponder exatamente ao processo da sua agência.", "en": "Create and adapt task statuses to perfectly match your agency's process.", "es": "Crea y adapta los estados de las tareas para que coincidan perfectamente con el proceso de tu agencia." },
   "landing_feature_3_title": { "pt": "Gestão de Clientes", "en": "Client Management", "es": "Gestión de Clientes" },
   "landing_feature_3_desc": { "pt": "Centralize todas as informações dos seus clientes, desde contatos até observações importantes.", "en": "Centralize all your client information, from contacts to important notes.", "es": "Centraliza toda la información de tus clientes, desde contactos hasta notas importantes." },
-  "landing_footer_text": { "pt": "© 2024 Flow. Todos os direitos reservados.", "en": "© 2024 Flow. All rights reserved.", "es": "© 2024 Flow. Todos los derechos reservados." },
+  "landing_footer_text": { "pt": "© 2024 Flow Social Media. Todos os direitos reservados.", "en": "© 2024 Flow Social Media. All rights reserved.", "es": "© 2024 Flow Social Media. Todos los derechos reservados." },
   
   // Login Page
   "login_welcome": { "pt": "Seja bem-vindo!", "en": "Welcome!", "es": "¡Bienvenido!" },

@@ -1274,7 +1274,7 @@ const AccountSettingsPage: React.FC = () => {
                             <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
                                 <h3 className="text-lg font-semibold text-red-600 dark:text-red-400 mb-2">Encerrar conta</h3>
                                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                                    Ao encerrar sua conta, o acesso ao Flow será bloqueado imediatamente. Dados básicos podem ser mantidos por tempo limitado para fins legais e de segurança.
+                                    Ao encerrar sua conta, o acesso ao Flow Social Media será bloqueado imediatamente. Dados básicos podem ser mantidos por tempo limitado para fins legais e de segurança.
                                 </p>
                                 <button
                                     type="button"
