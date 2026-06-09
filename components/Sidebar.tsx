@@ -125,10 +125,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             <div
                 className={`fixed inset-y-0 left-0 z-30 flex h-screen min-h-0 w-64 flex-col bg-white dark:bg-gray-800 shadow-[2px_0_20px_-4px_rgba(15,23,42,0.08)] dark:shadow-[2px_0_24px_-4px_rgba(0,0,0,0.45)] transition-transform duration-300 ease-in-out transform ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0`}
             >
-                <div className="flex shrink-0 items-center px-3 pb-4 pt-5">
-                    <div className="pl-4">
-                        <FlowBrandLogo variant="full" height={44} />
-                    </div>
+                <div className="flex h-[6.75rem] shrink-0 items-center px-4 sm:h-[7.5rem]">
+                    <FlowBrandLogo variant="full" height={60} className="max-w-[180px]" />
                 </div>
 
                 <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
