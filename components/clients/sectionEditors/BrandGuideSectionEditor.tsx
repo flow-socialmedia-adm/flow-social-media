@@ -4,7 +4,6 @@ import { PlusIcon, XIcon, CopyIcon, StarIcon, ArrowDownIcon, InfoIcon, FileTextI
 import { toUploadUrl, apiUpload, apiUploadDocument, apiUploadFont, UPLOAD_DOCUMENT_MAX_BYTES, UPLOAD_FONT_MAX_BYTES } from '../../../lib/api';
 import { resolveColorHex } from '../../../lib/utils';
 import { UnsavedChangesBar } from '../UnsavedChangesBar';
-import { CollapsibleBlock } from '../CollapsibleBlock';
 import TooltipHint from '../../TooltipHint';
 
 const BRAND_GUIDE_ACCENTS = {
@@ -30,9 +29,18 @@ const CollapsibleSectionBlock: React.FC<{
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
             </div>
         </button>
-        {expanded && <div className="p-5 space-y-4">{children}</div>}
+        {expanded && <div className="p-5 space-y-2">{children}</div>}
     </section>
 );
+
+/** Subseção sempre visível quando o bloco principal está aberto (sem acordeão interno). */
+const BrandGuideSubsection: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+    <div className="border-t border-gray-200 dark:border-gray-700 first:border-t-0 first:pt-0 pt-6 space-y-4">
+        <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{title}</h4>
+        {children}
+    </div>
+);
+
 import { ColorPickerPopover } from '../../ColorPickerPopover';
 import { GOOGLE_FONTS_LIST } from '../../../lib/googleFonts';
 
@@ -819,8 +827,8 @@ export const BrandGuideSectionEditor: React.FC<BrandGuideSectionEditorProps> = (
             <div className="space-y-4">
                 {/* Bloco 1: Logotipos e elementos principais */}
                 <CollapsibleSectionBlock title={t('brand_guide_block_logos_title')} description={t('brand_guide_block_logos_desc')} accent="logos_elements" expanded={!!expandedSections.main_logos_elements} onToggle={() => toggleSection('main_logos_elements')}>
-                <CollapsibleBlock title={t('logo_variations')} expanded={!!expandedSections.logos} onToggle={() => toggleSection('logos')}>
-                    <div className="pt-4">
+                <BrandGuideSubsection title={t('logo_variations')}>
+                    <div>
                         <input type="file" accept="image/*" className="hidden" id="brand-logo-upload" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleAssetFile(f, 'logo'); e.target.value = ''; }} />
                         {logos.length === 0 ? (
                             <div className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30 p-8 text-center">
@@ -895,11 +903,11 @@ export const BrandGuideSectionEditor: React.FC<BrandGuideSectionEditorProps> = (
                             </>
                         )}
                     </div>
-                </CollapsibleBlock>
+                </BrandGuideSubsection>
 
                 {/* Ícones — dentro do Bloco 1 */}
-                <CollapsibleBlock title={t('icons')} expanded={!!expandedSections.icons} onToggle={() => toggleSection('icons')}>
-                    <div className="pt-4">
+                <BrandGuideSubsection title={t('icons')}>
+                    <div>
                         <input
                             type="file"
                             accept=".svg,image/svg+xml,image/jpeg,image/png,image/webp"
@@ -961,11 +969,11 @@ export const BrandGuideSectionEditor: React.FC<BrandGuideSectionEditorProps> = (
                             </>
                         )}
                     </div>
-                </CollapsibleBlock>
+                </BrandGuideSubsection>
 
                 {/* Elementos gráficos — dentro do Bloco 1 */}
-                <CollapsibleBlock title={t('graphic_elements')} expanded={!!expandedSections.graphics} onToggle={() => toggleSection('graphics')}>
-                    <div className="pt-4">
+                <BrandGuideSubsection title={t('graphic_elements')}>
+                    <div>
                         {graphics.length === 0 ? (
                             <div className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30 p-8 text-center">
                                 <p className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-2">{t('graphics_empty_title')}</p>
@@ -1006,13 +1014,13 @@ export const BrandGuideSectionEditor: React.FC<BrandGuideSectionEditorProps> = (
                             </>
                         )}
                     </div>
-                </CollapsibleBlock>
+                </BrandGuideSubsection>
                 </CollapsibleSectionBlock>
 
                 {/* Bloco 2: Base visual da marca */}
                 <CollapsibleSectionBlock title={t('brand_guide_block_base_title')} description={t('brand_guide_block_base_desc')} accent="base_visual" expanded={!!expandedSections.main_base_visual} onToggle={() => toggleSection('main_base_visual')}>
-                <CollapsibleBlock title={t('color_palette')} expanded={!!expandedSections.colors} onToggle={() => toggleSection('colors')}>
-                    <div className="pt-4">
+                <BrandGuideSubsection title={t('color_palette')}>
+                    <div>
                         {!editedClient.brandColors?.length ? (
                             <div className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30 p-8 text-center">
                                 <p className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-2">{t('palette_empty_title')}</p>
@@ -1167,11 +1175,11 @@ export const BrandGuideSectionEditor: React.FC<BrandGuideSectionEditorProps> = (
                             />
                         )}
                     </div>
-                </CollapsibleBlock>
+                </BrandGuideSubsection>
 
                 {/* 3. Fontes — 3 slots: Primária, Secundária, Terciária — Google Fonts ou upload de arquivo */}
-                <CollapsibleBlock title={t('typography_fonts')} expanded={!!expandedSections.fonts} onToggle={() => toggleSection('fonts')}>
-                    <div className="pt-4 space-y-8">
+                <BrandGuideSubsection title={t('typography_fonts')}>
+                    <div className="space-y-8">
                         {logoUploadError && <p className="text-sm text-amber-600 dark:text-amber-400" role="alert">{logoUploadError}</p>}
                         {FONT_SLOTS.map(({ slot, fontKey, assetIdKey, labelKey, defaultLabelKey }) => {
                             const ty = editedClient.typography || {};
@@ -1280,13 +1288,13 @@ export const BrandGuideSectionEditor: React.FC<BrandGuideSectionEditorProps> = (
                         })}
                         <p className="text-xs text-gray-500 dark:text-gray-400">{t('fonts_empty_hint')}</p>
                     </div>
-                </CollapsibleBlock>
+                </BrandGuideSubsection>
                 </CollapsibleSectionBlock>
 
                 {/* Bloco 3: Biblioteca visual */}
                 <CollapsibleSectionBlock title={t('brand_guide_block_biblioteca_title')} description={t('brand_guide_block_biblioteca_desc')} accent="biblioteca" expanded={!!expandedSections.main_biblioteca} onToggle={() => toggleSection('main_biblioteca')}>
-                <CollapsibleBlock title={t('photos')} expanded={!!expandedSections.photos} onToggle={() => toggleSection('photos')}>
-                    <div className="pt-4">
+                <BrandGuideSubsection title={t('photos')}>
+                    <div>
                         {photos.length === 0 ? (
                             <div className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/30 p-8 text-center">
                                 <p className="text-base font-semibold text-gray-800 dark:text-gray-200 mb-2">{t('photos_empty_title')}</p>
@@ -1327,13 +1335,13 @@ export const BrandGuideSectionEditor: React.FC<BrandGuideSectionEditorProps> = (
                             </>
                         )}
                     </div>
-                </CollapsibleBlock>
+                </BrandGuideSubsection>
                 </CollapsibleSectionBlock>
 
                 {/* Bloco 4: Documentação da marca */}
                 <CollapsibleSectionBlock title={t('brand_guide_block_documentacao_title')} description={t('brand_guide_block_documentacao_desc')} accent="documentacao" expanded={!!expandedSections.main_documentacao} onToggle={() => toggleSection('main_documentacao')}>
-                <CollapsibleBlock title={t('brand_book_pdf')} expanded={!!expandedSections.brand_book} onToggle={() => toggleSection('brand_book')}>
-                    <div className="pt-4">
+                <BrandGuideSubsection title={t('brand_book_pdf')}>
+                    <div>
                         {brandBook ? (
                             <BrandBookCard
                                 asset={brandBook}
@@ -1369,7 +1377,7 @@ export const BrandGuideSectionEditor: React.FC<BrandGuideSectionEditorProps> = (
                             </>
                         )}
                     </div>
-                </CollapsibleBlock>
+                </BrandGuideSubsection>
                 </CollapsibleSectionBlock>
             </div>
         </div>

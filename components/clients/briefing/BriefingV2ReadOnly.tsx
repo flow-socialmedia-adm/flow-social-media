@@ -164,7 +164,10 @@ export const BriefingV2ReadOnly: React.FC<{
               : '';
         const has = freqText || b.planning.preferredPostDays.length ||
             op.productionLeadDays != null || op.approvalRequired != null || op.approvalChannel || op.clientResponseTime;
-        const owner = client.planningAccountOwner || b._internal?.planning?.accountOwnerLegacy;
+        const owner =
+            client.ownerPreferences?.defaultOwnerUserId ||
+            client.planningAccountOwner ||
+            b._internal?.planning?.accountOwnerLegacy;
         return (
             <BlockShell block="planning" title={t('briefing_block_planning_title')} desc={t('briefing_block_planning_desc')} hasContent={!!(has || owner)}>
                 {freqText && <ReadOnlyField label={t('briefing_planning_frequency')} value={freqText} />}
@@ -193,7 +196,7 @@ export const BriefingV2ReadOnly: React.FC<{
                 {op.approvalChannel && <ReadOnlyField label={t('briefing_approval_channel')} value={channelLabel(op.approvalChannel)} />}
                 {op.clientResponseTime && <ReadOnlyField label={t('briefing_client_response_time')} value={responseLabel(op.clientResponseTime)} />}
                 {owner && resolveOwnerDisplay && (
-                    <ReadOnlyField label={t('planning_account_owner_label')} value={resolveOwnerDisplay(owner, teamMembers)} />
+                    <ReadOnlyField label={t('client_responsible_by_client_label')} value={resolveOwnerDisplay(owner, teamMembers)} />
                 )}
             </BlockShell>
         );

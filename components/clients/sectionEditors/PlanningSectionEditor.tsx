@@ -6,7 +6,6 @@ import { patchClientBriefing } from '../../../lib/briefingV2';
 import { migrateClientToBriefingV2 } from '../../../lib/briefingV2/migrate';
 import { getBriefingBlockProgressFromBriefing } from '../../../lib/clientBriefingProgress';
 import { buildPostFrequency } from '../../../lib/utils';
-import { getEligibleAgencyOwners } from '../../../lib/agencyOperational';
 import { UnsavedChangesBar } from '../UnsavedChangesBar';
 import { ClientOwnerPreferencesPanel } from '../ClientOwnerPreferencesPanel';
 import { BriefingBlockSection } from '../briefing/BriefingBlockSection';
@@ -74,14 +73,6 @@ export const PlanningSectionEditor: React.FC<PlanningSectionEditorProps> = ({
         () => getBriefingBlockProgressFromBriefing(briefing, 'planning'),
         [briefing],
     );
-
-    const taskEligibleOwners = useMemo(() => {
-        const base = getEligibleAgencyOwners(teamMembers, 'task');
-        return base.filter((e) => {
-            const u = teamMembers.find((m) => m.id === e.id);
-            return u != null && (u.inviteStatus ?? 'active') === 'active';
-        });
-    }, [teamMembers]);
 
     const preferredDays = sortDays(briefing.planning.preferredPostDays ?? []);
     const freq = briefing.planning.frequency;
@@ -155,8 +146,6 @@ export const PlanningSectionEditor: React.FC<PlanningSectionEditorProps> = ({
             },
         }));
     };
-
-    const accountOwner = editedClient.planningAccountOwner || briefing._internal?.planning?.accountOwnerLegacy || '';
 
     return (
         <div className="space-y-6">
@@ -381,54 +370,6 @@ export const PlanningSectionEditor: React.FC<PlanningSectionEditorProps> = ({
                 {operationMode !== 'solo' && (
                     <div className="border-t border-gray-200 pt-5 dark:border-gray-700">
                         <ClientOwnerPreferencesPanel editedClient={editedClient} onUpdate={onUpdate} />
-                    </div>
-                )}
-
-                {operationMode !== 'solo' && (
-                    <div>
-                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-2">
-                            {t('planning_account_owner_label')}
-                        </label>
-                        {(() => {
-                            const raw = accountOwner.trim();
-                            const eligibleIds = new Set(taskEligibleOwners.map((e) => e.id));
-                            const valueForSelect = !raw ? '' : eligibleIds.has(raw) ? raw : `__legacy__:${raw}`;
-                            return (
-                                <select
-                                    value={valueForSelect}
-                                    onChange={(e) => {
-                                        const v = e.target.value;
-                                        const owner = !v ? '' : v.startsWith('__legacy__:') ? v.slice('__legacy__:'.length) : v;
-                                        onUpdate({
-                                            planningAccountOwner: owner,
-                                            ...patchClientBriefing(editedClient, (b) => ({
-                                                ...b,
-                                                _internal: {
-                                                    ...b._internal,
-                                                    planning: {
-                                                        ...b._internal?.planning,
-                                                        accountOwnerLegacy: owner || undefined,
-                                                    },
-                                                },
-                                            })),
-                                        });
-                                    }}
-                                    className="w-full text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-2 text-gray-900 dark:text-white"
-                                >
-                                    <option value="">{t('planning_account_owner_select_placeholder')}</option>
-                                    {taskEligibleOwners.map((e) => (
-                                        <option key={e.id} value={e.id}>
-                                            {e.name}
-                                        </option>
-                                    ))}
-                                    {raw && !eligibleIds.has(raw) ? (
-                                        <option value={`__legacy__:${raw}`}>
-                                            {t('planning_account_owner_legacy_option', { text: raw })}
-                                        </option>
-                                    ) : null}
-                                </select>
-                            );
-                        })()}
                     </div>
                 )}
             </BriefingBlockSection>

@@ -3,7 +3,13 @@ import type { BriefingV2 } from './types';
 import { tagsToLegacyText, leadDaysToLegacy, v2CtaToLegacyLabel } from './helpers';
 import { buildPostFrequency } from '../utils';
 
-/** Espelha BriefingV2 nos campos LEG V1 (dual-write no save). */
+/**
+ * Espelha BriefingV2 nos campos LEG V1 (dual-write no save).
+ *
+ * TODO(Briefing V2 — dívida técnica): separar futuramente `content.strategyNotes` (observações
+ * estratégicas do briefing) de `Client.notes` (notas internas do cliente). Hoje ambos são
+ * espelhados em `strategyNotes` / `notes` por compatibilidade — ver ClientsPage.tsx.
+ */
 export function syncLegacyBrandGuideFields(
     briefing: BriefingV2,
     prevInternal?: BriefingV2['_internal'],

@@ -224,8 +224,8 @@ const ClientsPage: React.FC = () => {
                     ...legacyBriefingSync,
                 },
                 accessCredentialsJson: clientToSave.accessCredentials || null,
-                // TODO(Briefing V2): remover dual-write em Client.notes após migração completa dos consumidores.
-                // Canônico: briefingForSave.content.strategyNotes (brandGuideJson.briefingV2.content.strategyNotes).
+                // TODO(Briefing V2): separar `content.strategyNotes` (briefing) de `Client.notes` (notas internas).
+                // Hoje: dual-write por compatibilidade — ver lib/briefingV2/syncLegacy.ts.
                 notes: briefingForSave.content.strategyNotes || clientToSave.strategyNotes || null,
                 clientOwnerPreferencesJson: clientToSave.ownerPreferences ?? defaultClientOwnerPreferences(),
             };
