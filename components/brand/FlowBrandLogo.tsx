@@ -51,8 +51,8 @@ export const FlowBrandLogo: React.FC<FlowBrandLogoProps> = ({
 			src={src}
 			alt={BRAND_PRODUCT_NAME}
 			onError={() => setFailed(true)}
-			className={`block w-auto object-contain ${className}`}
-			style={{ height: h, maxWidth: '100%' }}
+			className={`block w-auto bg-transparent object-contain ${className}`}
+			style={{ height: h, maxWidth: '100%', background: 'transparent' }}
 			decoding="async"
 		/>
 	);

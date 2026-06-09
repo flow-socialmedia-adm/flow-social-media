@@ -1,4 +1,9 @@
-/** Caminhos públicos dos assets de marca Flow Social Media. */
+/**
+ * Assets de marca Flow Social Media (PNG com fundo transparente).
+ * `fullLight` / `symbolColor` → tema claro da interface.
+ * `fullDark` / `symbolWhite` → tema escuro da interface.
+ * Os nomes “light/dark” referem-se ao contexto de uso, não a um retângulo no arquivo.
+ */
 export const BRAND_ASSETS = {
 	fullLight: '/branding/logo-full-light.png',
 	fullDark: '/branding/logo-full-dark.png',
