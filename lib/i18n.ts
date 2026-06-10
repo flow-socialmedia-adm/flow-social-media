@@ -203,6 +203,36 @@ export const translations: Translations = {
     "en": "Set month focus",
     "es": "Definir objetivo del mes",
   },
+  "planning_field_not_defined": {
+    "pt": "Não definido",
+    "en": "Not set",
+    "es": "No definido",
+  },
+  "planning_recommended_actions_title": {
+    "pt": "Ajustes recomendados",
+    "en": "Recommended adjustments",
+    "es": "Ajustes recomendados",
+  },
+  "planning_calendar_locked_hint": {
+    "pt": "Selecione um cliente para liberar o cronograma.",
+    "en": "Select a client to unlock the schedule.",
+    "es": "Selecciona un cliente para liberar el cronograma.",
+  },
+  "planning_summary_planned_label": {
+    "pt": "Planejados",
+    "en": "Planned",
+    "es": "Planificados",
+  },
+  "planning_summary_goal_label": {
+    "pt": "Meta",
+    "en": "Goal",
+    "es": "Meta",
+  },
+  "planning_summary_missing_label": {
+    "pt": "Faltam",
+    "en": "Missing",
+    "es": "Faltan",
+  },
   "planning_briefing_status_empty": {
     "pt": "Briefing vazio",
     "en": "Empty briefing",

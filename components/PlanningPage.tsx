@@ -628,6 +628,36 @@ const PlanningPage: React.FC = () => {
     const clientFilterSelectClass =
         'h-10 min-h-[2.5rem] min-w-[200px] rounded-lg border border-gray-300 bg-white px-3 text-sm font-medium text-gray-800 shadow-sm dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100';
 
+    const clientScheduleSummary = useMemo(() => {
+        if (!selectedClient || clientFilter === 'all') return null;
+        if (planningView === 'weekly') {
+            const clientItems = planningItems.filter(
+                (p) =>
+                    p.clientId === selectedClient.id &&
+                    (p.publishDate ?? p.date) >= startDate &&
+                    (p.publishDate ?? p.date) <= endDate,
+            );
+            const planned = clientItems.length;
+            const expected = getExpectedForWeek(selectedClient, weekDays);
+            const goal = expected != null ? Math.ceil(expected) : null;
+            const missing = goal != null ? Math.max(0, goal - planned) : null;
+            return { planned, goal, missing };
+        }
+        const y = currentMonthAnchor.getFullYear();
+        const m = currentMonthAnchor.getMonth();
+        const low = formatDateToYYYYMMDD(new Date(y, m, 1));
+        const hi = formatDateToYYYYMMDD(new Date(y, m + 1, 0));
+        const clientItems = planningItems.filter((p) => {
+            const ds = (p.publishDate ?? p.date ?? '').slice(0, 10);
+            return p.clientId === selectedClient.id && ds >= low && ds <= hi;
+        });
+        const planned = clientItems.length;
+        const expectedRaw = getExpectedForMonth(selectedClient, y, m);
+        const goal = expectedRaw != null ? Math.ceil(expectedRaw) : null;
+        const missing = goal != null ? Math.max(0, goal - planned) : null;
+        return { planned, goal, missing };
+    }, [selectedClient, clientFilter, planningView, planningItems, startDate, endDate, weekDays, currentMonthAnchor]);
+
     return (
         <div className="flex min-h-full min-w-0 w-full flex-1 flex-col">
             <ContentPageHeader
@@ -669,6 +699,7 @@ const PlanningPage: React.FC = () => {
                                 forecastGenerating={forecastGenerating}
                                 forecastPopoverRef={forecastPopoverRef}
                                 teamMembers={agencyProfile?.teamMembers ?? []}
+                                scheduleSummary={clientScheduleSummary}
                                 t={t}
                                 onClientFilterChange={setClientFilter}
                                 onToggleForecastPopover={() => setForecastPopoverOpen((o) => !o)}
@@ -680,6 +711,9 @@ const PlanningPage: React.FC = () => {
                                 className="relative"
                                 data-planning-wizard-step="content-calendar"
                             >
+                                {isPlanningLocked ? (
+                                    <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">{t('planning_calendar_locked_hint')}</p>
+                                ) : null}
                                 <div
                                     className={isPlanningLocked ? 'pointer-events-none select-none opacity-45' : undefined}
                                     aria-hidden={isPlanningLocked}
