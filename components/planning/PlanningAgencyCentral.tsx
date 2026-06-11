@@ -47,40 +47,30 @@ const ClientRow: React.FC<{
 	count: number;
 	clients: Client[];
 	emptyKey: string;
-	tone: 'ready' | 'review';
 	onSelectClient: (id: string) => void;
 	t: PlanningAgencyCentralProps['t'];
-}> = ({ icon, title, count, clients, emptyKey, tone, onSelectClient, t }) => {
-	const toneClass =
-		tone === 'ready'
-			? 'border-emerald-100/80 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-950/20'
-			: 'border-amber-100/80 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20';
-
-	return (
-		<div className={`rounded-lg border px-3.5 py-3.5 ${toneClass}`}>
-			<div className="flex items-center gap-2">
-				<span className="text-base" aria-hidden>
-					{icon}
-				</span>
-				<h3 className="flex-1 text-sm font-semibold text-gray-900 dark:text-white">{title}</h3>
-				<span className="rounded-full bg-white/80 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-gray-700 shadow-sm dark:bg-gray-800/80 dark:text-gray-200">
-					{count}
-				</span>
-			</div>
-			<div className="mt-3">
-				{clients.length === 0 ? (
-					<p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">{t(emptyKey)}</p>
-				) : (
-					<div className="flex flex-wrap gap-2">
-						{clients.map((c) => (
-							<ClientChip key={c.id} client={c} onClick={() => onSelectClient(c.id)} />
-						))}
-					</div>
-				)}
-			</div>
+}> = ({ icon, title, count, clients, emptyKey, onSelectClient, t }) => (
+	<div>
+		<div className="mb-4 flex items-center gap-2">
+			<span className="text-base" aria-hidden>
+				{icon}
+			</span>
+			<h3 className="flex-1 text-sm font-semibold text-gray-900 dark:text-white">{title}</h3>
+			<span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold tabular-nums text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+				{count}
+			</span>
 		</div>
-	);
-};
+		{clients.length === 0 ? (
+			<p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">{t(emptyKey)}</p>
+		) : (
+			<div className="flex flex-wrap gap-2">
+				{clients.map((c) => (
+					<ClientChip key={c.id} client={c} onClick={() => onSelectClient(c.id)} />
+				))}
+			</div>
+		)}
+	</div>
+);
 
 export const PlanningAgencyCentral: React.FC<PlanningAgencyCentralProps> = ({
 	ready,
@@ -97,53 +87,55 @@ export const PlanningAgencyCentral: React.FC<PlanningAgencyCentralProps> = ({
 			<h2 className="text-base font-bold tracking-tight text-gray-900 dark:text-white">{t('planning_agency_central_title')}</h2>
 		</header>
 
-		<div className="mt-4 space-y-3">
-			<ClientRow
-				icon="✅"
-				title={t('planning_agency_ready_title')}
-				count={ready.length}
-				clients={ready}
-				emptyKey="planning_agency_ready_empty"
-				tone="ready"
-				onSelectClient={onSelectClient}
-				t={t}
-			/>
+		<div>
+			<div className="py-5">
+				<ClientRow
+					icon="✅"
+					title={t('planning_agency_ready_title')}
+					count={ready.length}
+					clients={ready}
+					emptyKey="planning_agency_ready_empty"
+					onSelectClient={onSelectClient}
+					t={t}
+				/>
+			</div>
 
-			<ClientRow
-				icon="⚠️"
-				title={t('planning_agency_review_title')}
-				count={review.length}
-				clients={review}
-				emptyKey="planning_agency_review_empty"
-				tone="review"
-				onSelectClient={onSelectClient}
-				t={t}
-			/>
+			<div className="border-t border-gray-100 py-5 dark:border-gray-800">
+				<ClientRow
+					icon="⚠️"
+					title={t('planning_agency_review_title')}
+					count={review.length}
+					clients={review}
+					emptyKey="planning_agency_review_empty"
+					onSelectClient={onSelectClient}
+					t={t}
+				/>
+			</div>
 
 			<div
-				className="rounded-lg border border-indigo-100/80 bg-indigo-50/40 px-3.5 py-3.5 dark:border-indigo-900/40 dark:bg-indigo-950/25"
+				className="border-t border-gray-100 py-5 dark:border-gray-800"
 				data-planning-scope="agency-alerts"
 			>
-				<div className="flex items-center gap-2">
+				<div className="mb-4 flex items-center gap-2">
 					<span className="text-base" aria-hidden>
 						📅
 					</span>
 					<h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('planning_agency_month_alerts_title')}</h3>
 				</div>
-				<div className="mt-2.5">
-					{globalAlerts.length === 0 ? (
-						<p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">{t('planning_agency_alerts_empty')}</p>
-					) : (
-						<ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
-							{globalAlerts.map((item) => (
-								<li key={item.id} className="flex items-start gap-2 rounded-md bg-white/60 px-2 py-1.5 dark:bg-gray-900/40">
-									<span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-indigo-400" aria-hidden />
-									<span>{t(item.messageKey, item.messageParams as Record<string, string | number> | undefined)}</span>
-								</li>
-							))}
-						</ul>
-					)}
-				</div>
+				{globalAlerts.length === 0 ? (
+					<p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">{t('planning_agency_alerts_empty')}</p>
+				) : (
+					<ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+						{globalAlerts.map((item) => (
+							<li key={item.id} className="flex items-start gap-2">
+								<span className="mt-0.5 shrink-0 text-xs" aria-hidden>
+									•
+								</span>
+								<span>{t(item.messageKey, item.messageParams as Record<string, string | number> | undefined)}</span>
+							</li>
+						))}
+					</ul>
+				)}
 			</div>
 		</div>
 	</section>
