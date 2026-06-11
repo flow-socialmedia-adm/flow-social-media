@@ -1,5 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { forwardRef, useMemo } from 'react';
 import type { Client, User } from '../../types';
+import type { patchClientBriefing } from '../../lib/briefingV2';
 import FilterDropdown from '../tasks/FilterDropdown';
 import TooltipHint from '../TooltipHint';
 import { ChevronDownIcon } from '../icons';
@@ -9,8 +10,8 @@ import {
 	briefingStatusLabelKey,
 	buildPlanningBriefingSummary,
 } from '../../lib/planningBriefingSummary';
-import type { TabId } from '../ClientPresentationView';
 import type { ForecastPeriodKey } from '../../lib/utils';
+import { PlanningClientInlineEditor } from './PlanningClientInlineEditor';
 
 export type ClientScheduleSummary = {
 	planned: number;
@@ -33,62 +34,38 @@ type PlanningClientCardProps = {
 	forecastPopoverRef: React.RefObject<HTMLDivElement | null>;
 	teamMembers: User[];
 	scheduleSummary: ClientScheduleSummary | null;
+	savingClient?: boolean;
 	t: (key: string, vars?: Record<string, string | number>) => string;
 	onClientFilterChange: (value: string) => void;
 	onToggleForecastPopover: () => void;
 	onGenerateForecasts: (period: ForecastPeriodKey) => void;
-	onOpenClientTab: (clientId: string, tab: TabId) => void;
+	onBriefingPatch: (clientId: string, updater: Parameters<typeof patchClientBriefing>[1]) => void;
+	onClientPatch: (clientId: string, patch: Partial<Client>) => void;
 };
 
-const StatusPill: React.FC<{ label: string }> = ({ label }) => (
+const Badge: React.FC<{ label: string }> = ({ label }) => (
 	<span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700 dark:bg-gray-700 dark:text-gray-200">
 		{label}
 	</span>
 );
 
-const SummaryColumn: React.FC<{
-	title: string;
-	children: React.ReactNode;
-}> = ({ title, children }) => (
-	<div className="rounded-lg border border-gray-100 bg-gray-50/70 px-3 py-3 dark:border-gray-700/80 dark:bg-gray-800/40">
-		<h3 className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">{title}</h3>
-		<div className="mt-2.5 space-y-2.5">{children}</div>
-	</div>
-);
-
-const SummaryField: React.FC<{
-	label: string;
-	value?: string;
-	t: PlanningClientCardProps['t'];
-}> = ({ label, value, t }) => (
-	<div>
-		<p className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</p>
-		{value?.trim() ? (
-			<p className="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{value}</p>
-		) : (
-			<p className="mt-0.5 text-sm italic text-gray-400 dark:text-gray-500">{t('planning_field_not_defined')}</p>
-		)}
-	</div>
-);
-
-const ClientAvatar: React.FC<{ client: Client; size?: 'md' | 'lg' }> = ({ client, size = 'md' }) => {
+const ClientAvatar: React.FC<{ client: Client }> = ({ client }) => {
 	const img = resolveClientImageUrl(client);
 	const fallback = resolveClientFallbackColor(client);
-	const sizeClass = size === 'lg' ? 'h-12 w-12 text-sm' : 'h-11 w-11 text-sm';
 
 	if (img) {
 		return (
 			<img
 				src={toUploadUrl(img)}
 				alt=""
-				className={`${sizeClass} shrink-0 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-600`}
+				className="h-12 w-12 shrink-0 rounded-full object-cover ring-1 ring-gray-200 dark:ring-gray-600"
 			/>
 		);
 	}
 
 	return (
 		<span
-			className={`flex ${sizeClass} shrink-0 items-center justify-center rounded-full font-bold text-white ring-1 ring-gray-200 dark:ring-gray-600`}
+			className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white ring-1 ring-gray-200 dark:ring-gray-600"
 			style={{ backgroundColor: fallback }}
 			aria-hidden
 		>
@@ -165,27 +142,32 @@ const ForecastButton: React.FC<{
 	</div>
 );
 
-export const PlanningClientCard: React.FC<PlanningClientCardProps> = ({
-	clients,
-	clientFilter,
-	clientFilterOptions,
-	clientFilterSelectClass,
-	selectedClient,
-	isLocked,
-	canEditPlanning,
-	canGenerateForecasts,
-	generateForecastsTooltip,
-	forecastPopoverOpen,
-	forecastGenerating,
-	forecastPopoverRef,
-	teamMembers,
-	scheduleSummary,
-	t,
-	onClientFilterChange,
-	onToggleForecastPopover,
-	onGenerateForecasts,
-	onOpenClientTab,
-}) => {
+export const PlanningClientCard = forwardRef<HTMLElement, PlanningClientCardProps>(function PlanningClientCard(
+	{
+		clients,
+		clientFilter,
+		clientFilterOptions,
+		clientFilterSelectClass,
+		selectedClient,
+		isLocked,
+		canEditPlanning,
+		canGenerateForecasts,
+		generateForecastsTooltip,
+		forecastPopoverOpen,
+		forecastGenerating,
+		forecastPopoverRef,
+		teamMembers,
+		scheduleSummary,
+		savingClient = false,
+		t,
+		onClientFilterChange,
+		onToggleForecastPopover,
+		onGenerateForecasts,
+		onBriefingPatch,
+		onClientPatch,
+	},
+	ref,
+) {
 	const summary = useMemo(
 		() => (selectedClient ? buildPlanningBriefingSummary(selectedClient, t, teamMembers) : null),
 		[selectedClient, t, teamMembers],
@@ -205,8 +187,24 @@ export const PlanningClientCard: React.FC<PlanningClientCardProps> = ({
 		/>
 	);
 
+	const importantItems = useMemo(() => {
+		if (!summary) return [];
+		const items: { label: string; value: string }[] = [];
+		if (summary.monthFocusLabel.trim()) {
+			items.push({ label: t('briefing_month_focus'), value: summary.monthFocusLabel });
+		}
+		if (summary.pillarsLabel.trim()) {
+			items.push({ label: t('briefing_content_pillars'), value: summary.pillarsLabel.replace(/,\s*/g, ' • ') });
+		}
+		if (summary.channelLabel.trim()) {
+			items.push({ label: t('briefing_approval_channel'), value: summary.channelLabel });
+		}
+		return items;
+	}, [summary, t]);
+
 	return (
 		<section
+			ref={ref}
 			className="rounded-xl border border-gray-200 bg-white px-4 py-4 shadow-sm dark:border-gray-700 dark:bg-gray-900/40"
 			data-planning-wizard-step="client-entry"
 			data-planning-wizard-phase={isLocked ? 'select-client' : 'plan-client'}
@@ -218,21 +216,32 @@ export const PlanningClientCard: React.FC<PlanningClientCardProps> = ({
 					<p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t('planning_pick_client_hint')}</p>
 					<div className="mt-4">{clientSelect}</div>
 				</>
-			) : selectedClient ? (
+			) : selectedClient && summary ? (
 				<>
 					<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 						<div className="flex min-w-0 items-start gap-3">
-							<ClientAvatar client={selectedClient} size="lg" />
+							<ClientAvatar client={selectedClient} />
 							<div className="min-w-0 flex-1">
 								<h2 className="text-lg font-bold tracking-tight text-gray-900 dark:text-white">{selectedClient.name}</h2>
-								<div className="mt-2 flex flex-wrap gap-2">
-									{summary?.frequencyLabel ? <StatusPill label={summary.frequencyLabel} /> : null}
-									<StatusPill label={t(briefingStatusLabelKey(summary?.overallStatus ?? 'empty'))} />
-									<StatusPill
-										label={t('planning_client_planning_status', {
-											status: t(briefingStatusLabelKey(summary?.planningStatus ?? 'empty')),
-										})}
-									/>
+								<div className="mt-2 flex flex-wrap gap-1.5">
+									{summary.frequencyLabel ? <Badge label={summary.frequencyLabel} /> : null}
+									{summary.preferredDaysLabel ? <Badge label={summary.preferredDaysLabel} /> : null}
+									<Badge label={t(briefingStatusLabelKey(summary.overallStatus))} />
+									<Badge label={t(briefingStatusLabelKey(summary.planningStatus))} />
+									{summary.approvalLabel === t('yes') ? (
+										<Badge label={t('planning_badge_approval_required')} />
+									) : null}
+									{summary.ownerLabel ? <Badge label={summary.ownerLabel} /> : null}
+									{scheduleSummary?.goal != null ? (
+										<Badge
+											label={`${t('planning_summary_goal_label')}: ${scheduleSummary.goal}`}
+										/>
+									) : null}
+									{scheduleSummary?.missing != null && scheduleSummary.missing > 0 ? (
+										<Badge
+											label={`${t('planning_summary_missing_label')}: ${scheduleSummary.missing}`}
+										/>
+									) : null}
 								</div>
 							</div>
 						</div>
@@ -252,71 +261,31 @@ export const PlanningClientCard: React.FC<PlanningClientCardProps> = ({
 						</div>
 					</div>
 
-					{summary ? (
-						<div className="mt-5 space-y-4 border-t border-gray-100 pt-4 dark:border-gray-800" data-planning-wizard-step="planning-summary">
-							<div className="grid gap-3 md:grid-cols-3">
-								<SummaryColumn title={t('planning_summary_content_title')}>
-									<SummaryField label={t('briefing_current_campaign_objective')} value={summary.objectiveLabel} t={t} />
-									<SummaryField label={t('briefing_month_focus')} value={summary.monthFocusLabel} t={t} />
-									<SummaryField label={t('briefing_content_pillars')} value={summary.pillarsLabel} t={t} />
-								</SummaryColumn>
-								<SummaryColumn title={t('planning_summary_planning_title')}>
-									<SummaryField label={t('briefing_planning_frequency')} value={summary.frequencyLabel} t={t} />
-									<SummaryField label={t('preferred_post_days')} value={summary.preferredDaysLabel} t={t} />
-									{scheduleSummary ? (
-										<>
-											<SummaryField
-												label={t('planning_summary_planned_label')}
-												value={String(scheduleSummary.planned)}
-												t={t}
-											/>
-											{scheduleSummary.goal != null ? (
-												<SummaryField
-													label={t('planning_summary_goal_label')}
-													value={String(scheduleSummary.goal)}
-													t={t}
-												/>
-											) : null}
-											{scheduleSummary.missing != null ? (
-												<SummaryField
-													label={t('planning_summary_missing_label')}
-													value={String(scheduleSummary.missing)}
-													t={t}
-												/>
-											) : null}
-										</>
-									) : null}
-								</SummaryColumn>
-								<SummaryColumn title={t('planning_summary_operation_title')}>
-									<SummaryField label={t('planning_approval_required')} value={summary.approvalLabel} t={t} />
-									<SummaryField label={t('briefing_approval_channel')} value={summary.channelLabel} t={t} />
-									<SummaryField label={t('client_responsible_by_client_label')} value={summary.ownerLabel} t={t} />
-								</SummaryColumn>
-							</div>
-
-							{summary.quickActions.length > 0 ? (
-								<div className="rounded-lg border border-amber-100/80 bg-amber-50/40 px-3 py-3 dark:border-amber-900/40 dark:bg-amber-950/20">
-									<h4 className="text-xs font-semibold uppercase tracking-wide text-amber-900/80 dark:text-amber-200/90">
-										{t('planning_recommended_actions_title')}
-									</h4>
-									<div className="mt-2.5 flex flex-wrap gap-2">
-										{summary.quickActions.map((action) => (
-											<button
-												key={action.id}
-												type="button"
-												onClick={() => onOpenClientTab(selectedClient.id, action.tab)}
-												className="rounded-md border border-amber-200/80 bg-white px-2.5 py-1 text-xs font-medium text-amber-900 transition-colors hover:bg-amber-50 dark:border-amber-800 dark:bg-gray-900/50 dark:text-amber-200 dark:hover:bg-amber-950/40"
-											>
-												{t(action.labelKey)}
-											</button>
-										))}
-									</div>
+					{importantItems.length > 0 ? (
+						<div className="mt-4 space-y-2 border-t border-gray-100 pt-4 dark:border-gray-800">
+							<h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+								{t('planning_important_info_title')}
+							</h3>
+							{importantItems.map((item) => (
+								<div key={item.label}>
+									<p className="text-xs font-medium text-gray-500 dark:text-gray-400">{item.label}</p>
+									<p className="mt-0.5 text-sm text-gray-800 dark:text-gray-200">{item.value}</p>
 								</div>
-							) : null}
+							))}
 						</div>
 					) : null}
+
+					<PlanningClientInlineEditor
+						client={selectedClient}
+						teamMembers={teamMembers}
+						canEdit={canEditPlanning}
+						saving={savingClient}
+						t={t}
+						onBriefingPatch={(updater) => onBriefingPatch(selectedClient.id, updater)}
+						onClientPatch={(patch) => onClientPatch(selectedClient.id, patch)}
+					/>
 				</>
 			) : null}
 		</section>
 	);
-};
+});

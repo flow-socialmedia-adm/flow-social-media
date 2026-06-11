@@ -139,19 +139,19 @@ export const translations: Translations = {
     "es": "Central de Planificación de la Agencia",
   },
   "planning_agency_ready_title": {
-    "pt": "Clientes prontos para planejamento",
-    "en": "Clients ready for planning",
-    "es": "Clientes listos para planificación",
+    "pt": "Clientes com planejamento iniciado",
+    "en": "Clients with planning started",
+    "es": "Clientes con planificación iniciada",
   },
   "planning_agency_ready_empty": {
-    "pt": "Nenhum cliente com briefing operacional completo ainda.",
-    "en": "No clients with complete operational briefing yet.",
-    "es": "Ningún cliente con briefing operativo completo aún.",
+    "pt": "Nenhum cliente com planejamento iniciado ainda.",
+    "en": "No clients with planning started yet.",
+    "es": "Ningún cliente con planificación iniciada aún.",
   },
   "planning_agency_review_title": {
-    "pt": "Clientes que precisam de revisão",
-    "en": "Clients needing review",
-    "es": "Clientes que necesitan revisión",
+    "pt": "Clientes com pendências para completar",
+    "en": "Clients with pending items to complete",
+    "es": "Clientes con pendientes por completar",
   },
   "planning_agency_review_empty": {
     "pt": "Nenhum cliente pendente de revisão.",
@@ -232,6 +232,41 @@ export const translations: Translations = {
     "pt": "Faltam",
     "en": "Missing",
     "es": "Faltan",
+  },
+  "planning_important_info_title": {
+    "pt": "Informações importantes",
+    "en": "Important information",
+    "es": "Información importante",
+  },
+  "planning_badge_approval_required": {
+    "pt": "Aprovação obrigatória",
+    "en": "Approval required",
+    "es": "Aprobación obligatoria",
+  },
+  "planning_placeholder_fill": {
+    "pt": "Preencher",
+    "en": "Fill in",
+    "es": "Completar",
+  },
+  "planning_placeholder_add_pillars": {
+    "pt": "Adicionar pilares",
+    "en": "Add pillars",
+    "es": "Agregar pilares",
+  },
+  "planning_placeholder_select": {
+    "pt": "Selecionar",
+    "en": "Select",
+    "es": "Seleccionar",
+  },
+  "planning_inline_saving": {
+    "pt": "Salvando…",
+    "en": "Saving…",
+    "es": "Guardando…",
+  },
+  "planning_inline_save_error": {
+    "pt": "Não foi possível salvar. Tente novamente.",
+    "en": "Could not save. Please try again.",
+    "es": "No se pudo guardar. Inténtalo de nuevo.",
   },
   "planning_briefing_status_empty": {
     "pt": "Briefing vazio",

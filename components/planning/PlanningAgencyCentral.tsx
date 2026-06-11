@@ -50,8 +50,8 @@ const ClientRow: React.FC<{
 	onSelectClient: (id: string) => void;
 	t: PlanningAgencyCentralProps['t'];
 }> = ({ icon, title, count, clients, emptyKey, onSelectClient, t }) => (
-	<div>
-		<div className="mb-4 flex items-center gap-2">
+	<div className="space-y-3">
+		<div className="flex items-center gap-2">
 			<span className="text-base" aria-hidden>
 				{icon}
 			</span>
@@ -88,7 +88,30 @@ export const PlanningAgencyCentral: React.FC<PlanningAgencyCentralProps> = ({
 		</header>
 
 		<div>
-			<div className="py-5">
+			<div className="py-5" data-planning-scope="agency-alerts">
+				<div className="mb-4 flex items-center gap-2">
+					<span className="text-base" aria-hidden>
+						📅
+					</span>
+					<h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('planning_agency_month_alerts_title')}</h3>
+				</div>
+				{globalAlerts.length === 0 ? (
+					<p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">{t('planning_agency_alerts_empty')}</p>
+				) : (
+					<ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
+						{globalAlerts.map((item) => (
+							<li key={item.id} className="flex items-start gap-2">
+								<span className="mt-0.5 shrink-0 text-xs" aria-hidden>
+									•
+								</span>
+								<span>{t(item.messageKey, item.messageParams as Record<string, string | number> | undefined)}</span>
+							</li>
+						))}
+					</ul>
+				)}
+			</div>
+
+			<div className="border-t border-gray-100 py-5 dark:border-gray-800">
 				<ClientRow
 					icon="✅"
 					title={t('planning_agency_ready_title')}
@@ -110,32 +133,6 @@ export const PlanningAgencyCentral: React.FC<PlanningAgencyCentralProps> = ({
 					onSelectClient={onSelectClient}
 					t={t}
 				/>
-			</div>
-
-			<div
-				className="border-t border-gray-100 py-5 dark:border-gray-800"
-				data-planning-scope="agency-alerts"
-			>
-				<div className="mb-4 flex items-center gap-2">
-					<span className="text-base" aria-hidden>
-						📅
-					</span>
-					<h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t('planning_agency_month_alerts_title')}</h3>
-				</div>
-				{globalAlerts.length === 0 ? (
-					<p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">{t('planning_agency_alerts_empty')}</p>
-				) : (
-					<ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-						{globalAlerts.map((item) => (
-							<li key={item.id} className="flex items-start gap-2">
-								<span className="mt-0.5 shrink-0 text-xs" aria-hidden>
-									•
-								</span>
-								<span>{t(item.messageKey, item.messageParams as Record<string, string | number> | undefined)}</span>
-							</li>
-						))}
-					</ul>
-				)}
 			</div>
 		</div>
 	</section>

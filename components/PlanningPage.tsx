@@ -1,8 +1,6 @@
 import React, { useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { AppContext } from '../contexts/AppContext';
 import type { Client, Task, Language } from '../types';
-import type { TabId } from './ClientPresentationView';
 import { formatDateToYYYYMMDD, getWeekDaysMondayFirst, getExpectedForWeek, getExpectedForMonth, getDateRangeForForecastPeriod, computeForecastDatesToCreate, getMonthName, getMonthDays, isToday } from '../lib/utils';
 import type { ForecastPeriodKey } from '../lib/utils';
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, FunnelIcon } from './icons';
@@ -30,7 +28,8 @@ import { createPlanningQuotaValidator } from '../lib/planningQuota';
 import { scopePlanningCentralItems } from '../lib/planningCentralView';
 import { normalizeClient } from './clients/clientUtils';
 import { computeAgencyPlanningLists } from '../lib/planningAgencyCentral';
-import { setClientDeepLink } from '../lib/planningClientNavigation';
+import { patchClientBriefing } from '../lib/briefingV2';
+import { savePlanningClient } from '../lib/planningClientSave';
 import { PlanningAgencyCentral } from './planning/PlanningAgencyCentral';
 import { PlanningClientCard } from './planning/PlanningClientCard';
 
@@ -106,7 +105,6 @@ function groupPlanningDayItemsByClient(
 
 const PlanningPage: React.FC = () => {
     const context = useContext(AppContext);
-    const navigate = useNavigate();
     if (!context) return null;
 
     const { t, language, tasks, setTasks, workflows, clientWorkflowId, notify, setPage, agencyMode, agencyProfile, canEditModule, canViewModule, logActivity } =
@@ -129,7 +127,10 @@ const PlanningPage: React.FC = () => {
     const [modalTask, setModalTask] = useState<Partial<Task> | null>(null);
     const [forecastPopoverOpen, setForecastPopoverOpen] = useState(false);
     const [forecastGenerating, setForecastGenerating] = useState(false);
+    const [savingClientId, setSavingClientId] = useState<string | null>(null);
     const forecastPopoverRef = useRef<HTMLDivElement>(null);
+    const clientCardRef = useRef<HTMLElement>(null);
+    const prevClientFilterRef = useRef<string>('all');
     const isPlanningLocked = clientFilter === 'all';
     const [planningView, setPlanningView] = useState<'weekly' | 'monthly'>('monthly');
     const [currentMonthAnchor, setCurrentMonthAnchor] = useState(() => {
@@ -521,14 +522,55 @@ const PlanningPage: React.FC = () => {
         setClientFilter(clientId);
     }, []);
 
-    const goToClientTab = useCallback(
-        (clientId: string, tab: TabId) => {
-            setClientDeepLink(clientId, tab);
-            setPage('clients');
-            navigate(`/clientes/${clientId}`);
+    const persistClient = useCallback(
+        async (clientId: string, merged: Client, rollback: Client) => {
+            setSavingClientId(clientId);
+            setClients((prev) => prev.map((c) => (c.id === clientId ? merged : c)));
+            try {
+                const saved = await savePlanningClient(merged);
+                setClients((prev) => prev.map((c) => (c.id === clientId ? saved : c)));
+            } catch (e) {
+                console.error('[PlanningPage] save client error', e);
+                setClients((prev) => prev.map((c) => (c.id === clientId ? rollback : c)));
+                notify(t('planning_inline_save_error') || 'Erro ao salvar');
+            } finally {
+                setSavingClientId(null);
+            }
         },
-        [navigate, setPage],
+        [notify, t],
     );
+
+    const handleBriefingPatch = useCallback(
+        (clientId: string, updater: Parameters<typeof patchClientBriefing>[1]) => {
+            if (!canEditPlanning) return;
+            const current = clients.find((c) => c.id === clientId);
+            if (!current) return;
+            const patch = patchClientBriefing(current, updater);
+            const merged = { ...current, ...patch };
+            void persistClient(clientId, merged, current);
+        },
+        [canEditPlanning, clients, persistClient],
+    );
+
+    const handleClientPatch = useCallback(
+        (clientId: string, partial: Partial<Client>) => {
+            if (!canEditPlanning) return;
+            const current = clients.find((c) => c.id === clientId);
+            if (!current) return;
+            const merged = { ...current, ...partial };
+            void persistClient(clientId, merged, current);
+        },
+        [canEditPlanning, clients, persistClient],
+    );
+
+    useEffect(() => {
+        if (clientFilter !== 'all' && clientFilter !== prevClientFilterRef.current) {
+            requestAnimationFrame(() => {
+                clientCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+        }
+        prevClientFilterRef.current = clientFilter;
+    }, [clientFilter]);
 
     useEffect(() => {
         if (!forecastPopoverOpen) return;
@@ -686,6 +728,7 @@ const PlanningPage: React.FC = () => {
                             />
 
                             <PlanningClientCard
+                                ref={clientCardRef}
                                 clients={clients}
                                 clientFilter={clientFilter}
                                 clientFilterOptions={clientFilterOptions}
@@ -700,11 +743,13 @@ const PlanningPage: React.FC = () => {
                                 forecastPopoverRef={forecastPopoverRef}
                                 teamMembers={agencyProfile?.teamMembers ?? []}
                                 scheduleSummary={clientScheduleSummary}
+                                savingClient={savingClientId === selectedClient?.id}
                                 t={t}
                                 onClientFilterChange={setClientFilter}
                                 onToggleForecastPopover={() => setForecastPopoverOpen((o) => !o)}
                                 onGenerateForecasts={handleGenerateForecasts}
-                                onOpenClientTab={goToClientTab}
+                                onBriefingPatch={handleBriefingPatch}
+                                onClientPatch={handleClientPatch}
                             />
 
                             <div
