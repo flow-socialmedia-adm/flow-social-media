@@ -13,11 +13,17 @@ Documento canônico para contagem de posts e geração de previsões na página 
 
 ### Meta (Y)
 
-`Y = ceil(getExpectedForMonth(cliente, ano, mês))`
+Fonte canônica: `getMonthlyPlanningGoal(cliente, ano, mês)` em `lib/planningSchedule.ts`.
 
-- Contrato **mensal:** `postFrequencyQuantity`.
-- Contrato **semanal:** `ceil(quantidade × 4,33)`.
-- **Frequência variável** ou sem quantidade/período válidos: tag oculta (`goal = null`).
+| Contrato | Regra |
+|----------|--------|
+| **Por mês** | `Y = quantidade contratada` (ex.: 4 posts/mês → meta **4**, mesmo em meses com 5 semanas) |
+| **Por semana** | `Y = quantidade × semanas civis do mês` (seg–dom com ≥1 dia no mês; ex.: 1/sem em mês de 5 semanas → meta **5**) |
+| **Variável** ou sem quantidade/período válidos | tag oculta (`goal = null`) |
+
+Resolução de frequência (ordem): `briefing.planning.frequency` → campos flat (`postFrequencyQuantity` / `postFrequencyPeriod`) → string legada (`parsePostFrequencyStructured`).
+
+**Mês com 5 semanas:** não altera a meta de clientes **por mês**; gera apenas alerta informativo de distribuição na Central da Agência (`intel_month_five_weeks`). Clientes **por semana** têm meta proporcional ao número real de semanas do mês.
 
 ### Contagem (X) — slot ocupado
 
@@ -42,7 +48,8 @@ Não alternar para "Faltam: N" na tag executiva.
 
 ### Implementação
 
-- `lib/planningSchedule.ts` — funções `taskOccupiesPlanningSlot`, `getTaskPlanningDate`, `computeClientMonthlySchedule`.
+- `lib/planningSchedule.ts` — `resolvePlanningFrequency`, `getMonthlyPlanningGoal`, `taskOccupiesPlanningSlot`, `getTaskPlanningDate`, `computeClientMonthlySchedule`.
+- `lib/utils.ts` — `countCalendarWeeksInMonth`, `getExpectedForMonth` (compatibilidade para geração de previsões com campos flat).
 - Consumido em `PlanningPage.tsx` → `PlanningExecutiveTags`.
 
 ---
@@ -101,4 +108,4 @@ Campos `date`, `publishDate`, `dueDate` são **datas civis** (`YYYY-MM-DD`), sem
 |----------|----------|
 | **Estratégia do Cliente** (aba) | Objetivo do perfil, pilares, público, tom, diferenciais, observações — permanente |
 | **Operação dos Posts** (aba, ex-Planejamento) | Frequência, dias, responsável, aprovação, canal, prazos |
-| **Planejamento de Conteúdo** (página calendário) | Objetivo do mês, foco do mês, pilares (leitura/edição inline), previsões, calendário |
+| **Planejamento de Conteúdo** (página calendário) | Objetivo do mês, pilares (leitura/edição inline), previsões, calendário |

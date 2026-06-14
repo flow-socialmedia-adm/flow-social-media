@@ -1,8 +1,41 @@
 import type { Client, Task } from '../types';
-import type { BriefingV2 } from './briefingV2/types';
 import { resolveClientBriefing } from './briefingV2/migrate';
 import { clientHasStructuredFrequency } from './clientContext';
-import { formatDateToYYYYMMDD, getExpectedForMonth } from './utils';
+import {
+	countCalendarWeeksInMonth,
+	formatDateToYYYYMMDD,
+	parsePostFrequencyStructured,
+} from './utils';
+
+export type PlanningFrequency = { quantity: number; period: 'week' | 'month' };
+
+/** Frequência canônica do planejamento: briefing V2 → campos flat → string legada. */
+export function resolvePlanningFrequency(client: Client): PlanningFrequency | null {
+	const briefing = resolveClientBriefing(client);
+	const freq = briefing.planning.frequency;
+	if (freq.variable || client.postFrequencyVariable) return null;
+
+	const qty = freq.quantity ?? client.postFrequencyQuantity;
+	const period = freq.period ?? client.postFrequencyPeriod;
+	if (typeof qty === 'number' && qty > 0 && (period === 'week' || period === 'month')) {
+		return { quantity: qty, period };
+	}
+
+	const parsed = parsePostFrequencyStructured(client.postFrequency);
+	return parsed;
+}
+
+/**
+ * Meta mensal (Y) para tag, faltantes e previsões.
+ * - Por mês: quantidade contratada (não varia com 4 ou 5 semanas).
+ * - Por semana: quantidade × semanas civis do mês.
+ */
+export function getMonthlyPlanningGoal(client: Client, year: number, month: number): number | null {
+	const resolved = resolvePlanningFrequency(client);
+	if (!resolved) return null;
+	if (resolved.period === 'month') return resolved.quantity;
+	return resolved.quantity * countCalendarWeeksInMonth(year, month);
+}
 
 export type ClientScheduleSummary = {
 	planned: number;
@@ -39,8 +72,7 @@ export function computeClientMonthlySchedule(
 			getTaskPlanningDate(p) <= hi,
 	).length;
 
-	const expectedRaw = getExpectedForMonth(client, year, month);
-	const goal = expectedRaw != null ? Math.ceil(expectedRaw) : null;
+	const goal = getMonthlyPlanningGoal(client, year, month);
 	const missing = goal != null ? Math.max(0, goal - planned) : null;
 	return { planned, goal, missing };
 }

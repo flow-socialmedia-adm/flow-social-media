@@ -10,8 +10,6 @@ import {
 	formatPreferredDayShort,
 	formatScheduleIndicator,
 } from '../../lib/planningFriendlyLabels';
-import { briefingStatusLabelKey } from '../../lib/planningBriefingSummary';
-import { getBriefingOverallStatus } from '../../lib/clientBriefingProgress';
 import type { ClientScheduleSummary } from '../../lib/planningSchedule';
 
 const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -202,14 +200,6 @@ export const PlanningExecutiveTags: React.FC<PlanningExecutiveTagsProps> = ({
 					</button>
 				)}
 
-				<span className={`${tagBase} border-gray-200 bg-gray-50 text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200`}>
-					{t(briefingStatusLabelKey(getBriefingOverallStatus(client)))}
-				</span>
-
-				{scheduleTag ? (
-					<span className={scheduleTag.tone === 'warning' ? tagWarning : tagOk}>{scheduleTag.label}</span>
-				) : null}
-
 				{editMode === 'day' ? (
 					<span className={`${tagBase} flex-wrap border-indigo-300 bg-indigo-50/60 dark:border-indigo-600 dark:bg-indigo-950/30`}>
 						{DAY_ORDER.map((day) => (
@@ -232,6 +222,10 @@ export const PlanningExecutiveTags: React.FC<PlanningExecutiveTagsProps> = ({
 						{preferredDays.length ? formatPreferredDayShort(preferredDays, t) : t('planning_day_tag_empty')}
 					</button>
 				)}
+
+				{scheduleTag ? (
+					<span className={scheduleTag.tone === 'warning' ? tagWarning : tagOk}>{scheduleTag.label}</span>
+				) : null}
 
 				{saving ? (
 					<span className="text-[10px] text-gray-400 dark:text-gray-500">{t('planning_inline_saving')}</span>

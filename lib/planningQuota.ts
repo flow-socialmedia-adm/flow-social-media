@@ -1,9 +1,7 @@
+import type { Client } from '../types';
 import { apiGet } from './api';
-import {
-	formatDateToYYYYMMDD,
-	getExpectedForMonth,
-	type ClientFrequencyInput,
-} from './utils';
+import { getMonthlyPlanningGoal } from './planningSchedule';
+import { formatDateToYYYYMMDD } from './utils';
 
 export type PlanningSlotTask = {
 	postType?: string | null;
@@ -19,18 +17,13 @@ export type PlanningQuotaValidation = { canCreate: boolean; message?: string };
 
 /** Avalia meta do mês civil que contém `dateStr` (mesma regra da geração de previsões). */
 export function evaluatePlanningQuota(
-	client: ClientFrequencyInput,
+	client: Client,
 	dateStr: string,
 	items: PlanningSlotTask[],
 	t: (key: string, params?: Record<string, string>) => string,
 ): PlanningQuotaValidation {
-	if (client.postFrequencyVariable === true) return { canCreate: true };
-	const period = client.postFrequencyPeriod;
-	if (period !== 'week' && period !== 'month') return { canCreate: true };
-	if (!client.postFrequencyQuantity || client.postFrequencyQuantity < 1) return { canCreate: true };
-
 	const d = new Date(`${dateStr}T12:00:00`);
-	const expected = getExpectedForMonth(client, d.getFullYear(), d.getMonth());
+	const expected = getMonthlyPlanningGoal(client, d.getFullYear(), d.getMonth());
 	if (expected == null) return { canCreate: true };
 
 	const occupied = items.filter(taskOccupiesPlanningSlot).length;
@@ -63,7 +56,7 @@ export async function fetchPlanningQuotaTasks(
 	return resp?.items || [];
 }
 
-export type PlanningQuotaClient = ClientFrequencyInput & { id: string };
+export type PlanningQuotaClient = Client;
 
 /** Validador reutilizável para modal (previsão e post real). */
 export function createPlanningQuotaValidator(

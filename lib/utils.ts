@@ -227,14 +227,33 @@ function isPreferredDayForDate(client: { preferredPostDays?: string[] }, date: D
   return client.preferredPostDays.includes(key);
 }
 
-/** Meta esperada para um mês (contrato mensal). */
+/** Semanas civis (seg–dom) com pelo menos um dia no mês — base da meta proporcional semanal. */
+export function countCalendarWeeksInMonth(year: number, month: number): number {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  const seen = new Set<string>();
+  for (let day = 1; day <= lastDay; day++) {
+    const monday = getWeekDaysMondayFirst(new Date(year, month, day))[0];
+    seen.add(formatDateToYYYYMMDD(monday));
+  }
+  return seen.size;
+}
+
+/** Meta mensal a partir de campos flat/legado (sem briefing). Preferir `getMonthlyPlanningGoal` na UI de planejamento. */
 export function getExpectedForMonth(client: ClientFrequencyInput, year: number, month: number): number | null {
   if (client.postFrequencyVariable === true) return null;
-  const qty = client.postFrequencyQuantity;
-  const period = client.postFrequencyPeriod;
-  if (qty != null && qty > 0 && period === 'month') return qty;
-  if (qty != null && qty > 0 && period === 'week') return Math.ceil((qty * 4.33)); // ~4.33 semanas/mês
-  return parsePostsPerWeek(client.postFrequency) != null ? Math.ceil((parsePostsPerWeek(client.postFrequency)! * 4.33)) : null;
+
+  let qty = client.postFrequencyQuantity;
+  let period = client.postFrequencyPeriod;
+  if (qty == null || qty < 1 || (period !== 'week' && period !== 'month')) {
+    const parsed = parsePostFrequencyStructured(client.postFrequency);
+    if (!parsed) return null;
+    qty = parsed.quantity;
+    period = parsed.period;
+  }
+
+  if (qty == null || qty < 1 || (period !== 'week' && period !== 'month')) return null;
+  if (period === 'month') return qty;
+  return qty * countCalendarWeeksInMonth(year, month);
 }
 
 /** Meta esperada para uma semana (contrato semanal). */
