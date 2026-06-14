@@ -268,6 +268,128 @@ export const translations: Translations = {
     "en": "Could not save. Please try again.",
     "es": "No se pudo guardar. Inténtalo de nuevo.",
   },
+  "planning_edit_briefing": {
+    "pt": "Editar briefing",
+    "en": "Edit brief",
+    "es": "Editar briefing",
+  },
+  "planning_drawer_title": {
+    "pt": "Editar briefing",
+    "en": "Edit brief",
+    "es": "Editar briefing",
+  },
+  "planning_approval_tag_label": {
+    "pt": "Aprovação",
+    "en": "Approval",
+    "es": "Aprobación",
+  },
+  "planning_day_tag_empty": {
+    "pt": "Dia",
+    "en": "Day",
+    "es": "Día",
+  },
+  "planning_owner_tag_empty": {
+    "pt": "Responsável",
+    "en": "Owner",
+    "es": "Responsable",
+  },
+  "planning_freq_friendly_empty": {
+    "pt": "Frequência",
+    "en": "Frequency",
+    "es": "Frecuencia",
+  },
+  "planning_freq_friendly_variable": {
+    "pt": "Frequência variável",
+    "en": "Variable frequency",
+    "es": "Frecuencia variable",
+  },
+  "planning_freq_friendly_one_week": {
+    "pt": "1 post/sem",
+    "en": "1 post/wk",
+    "es": "1 post/sem",
+  },
+  "planning_freq_friendly_week": {
+    "pt": "{n} posts/sem",
+    "en": "{n} posts/wk",
+    "es": "{n} posts/sem",
+  },
+  "planning_freq_friendly_month": {
+    "pt": "{n} posts/mês ≈ {approx}/sem",
+    "en": "{n} posts/mo ≈ {approx}/wk",
+    "es": "{n} posts/mes ≈ {approx}/sem",
+  },
+  "planning_freq_period_week_short": {
+    "pt": "por semana",
+    "en": "per week",
+    "es": "por semana",
+  },
+  "planning_freq_period_month_short": {
+    "pt": "por mês",
+    "en": "per month",
+    "es": "por mes",
+  },
+  "planning_schedule_missing": {
+    "pt": "Faltam: {n}",
+    "en": "Missing: {n}",
+    "es": "Faltan: {n}",
+  },
+  "planning_schedule_posts_ratio": {
+    "pt": "Posts planejados: {planned}/{goal}",
+    "en": "Planned posts: {planned}/{goal}",
+    "es": "Posts planificados: {planned}/{goal}",
+  },
+  "planning_generate_forecasts_tooltip_incomplete": {
+    "pt": "Complete o planejamento do cliente antes de gerar previsões.",
+    "en": "Complete the client planning before generating forecasts.",
+    "es": "Complete la planificación del cliente antes de generar previsiones.",
+  },
+  "planning_month_objective_label": {
+    "pt": "Objetivo do mês",
+    "en": "Month objective",
+    "es": "Objetivo del mes",
+  },
+  "planning_pillars_label": {
+    "pt": "Pilares",
+    "en": "Pillars",
+    "es": "Pilares",
+  },
+  "planning_click_to_define": {
+    "pt": "Clique para definir",
+    "en": "Click to define",
+    "es": "Haz clic para definir",
+  },
+  "planning_quick_action_define_month_objective": {
+    "pt": "Definir objetivo do mês",
+    "en": "Set month objective",
+    "es": "Definir objetivo del mes",
+  },
+  "planning_day_menu_title": {
+    "pt": "Dia",
+    "en": "Day",
+    "es": "Día",
+  },
+  "planning_day_create_post": {
+    "pt": "Criar post",
+    "en": "Create post",
+    "es": "Crear post",
+  },
+  "planning_day_create_forecast": {
+    "pt": "Criar previsão",
+    "en": "Create forecast",
+    "es": "Crear previsión",
+  },
+  "planning_day_empty_readonly": {
+    "pt": "Nenhum item neste dia.",
+    "en": "No items on this day.",
+    "es": "Ningún ítem en este día.",
+  },
+  "day_mon_short": { "pt": "Seg", "en": "Mon", "es": "Lun" },
+  "day_tue_short": { "pt": "Ter", "en": "Tue", "es": "Mar" },
+  "day_wed_short": { "pt": "Qua", "en": "Wed", "es": "Mié" },
+  "day_thu_short": { "pt": "Qui", "en": "Thu", "es": "Jue" },
+  "day_fri_short": { "pt": "Sex", "en": "Fri", "es": "Vie" },
+  "day_sat_short": { "pt": "Sáb", "en": "Sat", "es": "Sáb" },
+  "day_sun_short": { "pt": "Dom", "en": "Sun", "es": "Dom" },
   "planning_briefing_status_empty": {
     "pt": "Briefing vazio",
     "en": "Empty briefing",
@@ -455,7 +577,7 @@ export const translations: Translations = {
   "exibir": { "pt": "Exibir", "en": "Show", "es": "Mostrar" },
   "ambos": { "pt": "Ambos", "en": "Both", "es": "Ambos" },
   "clients": { "pt": "Clientes", "en": "Clients", "es": "Clientes" },
-  "planejamento": { "pt": "Planejamento", "en": "Planning", "es": "Planificación" },
+  "planejamento": { "pt": "Operação dos Posts", "en": "Post Operations", "es": "Operación de posts" },
   /** Página do menu (calendário semanal de posts/previsões); não confundir com a aba Planejamento do cliente. */
   "editorial_calendar": { "pt": "Planejamento de Conteúdo", "en": "Content Planning", "es": "Planificación de Contenido" },
   "editorial_calendar_empty_hint": {
@@ -2279,7 +2401,7 @@ export const translations: Translations = {
   "hist_tab_client_data": { "pt": "Dados do cliente", "en": "Client data", "es": "Datos del cliente" },
   "hist_tab_client_brand_guide": { "pt": "Guia da marca", "en": "Brand guide", "es": "Guía de marca" },
   "hist_tab_client_strategy": { "pt": "Estratégia", "en": "Strategy", "es": "Estrategia" },
-  "hist_tab_client_planning": { "pt": "Planejamento", "en": "Planning", "es": "Planificación" },
+  "hist_tab_client_planning": { "pt": "Operação dos Posts", "en": "Post Operations", "es": "Operación de posts" },
   "hist_tab_client_contract": { "pt": "Contrato", "en": "Contract", "es": "Contrato" },
   "hist_tab_client_finance": { "pt": "Financeiro do cliente", "en": "Client finance", "es": "Finanzas del cliente" },
 

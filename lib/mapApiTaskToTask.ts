@@ -1,10 +1,8 @@
 import type { Task } from '../types';
+import { normalizeDateOnly } from './dateOnly';
 
 function normalizeDate(v: unknown): string | undefined {
-	if (v == null) return undefined;
-	if (typeof v === 'string') return v.slice(0, 10) || undefined;
-	if (typeof v === 'object' && v instanceof Date && !Number.isNaN(v.getTime())) return v.toISOString().slice(0, 10);
-	return undefined;
+	return normalizeDateOnly(v);
 }
 
 function normalizeIso(v: unknown): string | undefined {

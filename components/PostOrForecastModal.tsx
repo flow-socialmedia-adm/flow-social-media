@@ -12,6 +12,7 @@ import {
     stepValueForTask,
 } from '../lib/taskActionFlow';
 import { CLIENT_INITIAL_OWNER_STAGE_KEY } from '../lib/client-stage-keys';
+import { todayDateOnlyLocal } from '../lib/dateOnly';
 import {
     defaultClientOwnerPreferences,
     resolveClientStageOwnerUserId,
@@ -259,7 +260,7 @@ const PostOrForecastModal: React.FC<PostOrForecastModalProps> = ({
             setDate(
                 initialDate ||
                     (task?.publishDate ?? task?.dueDate ?? task?.date) ||
-                    new Date().toISOString().slice(0, 10),
+                    todayDateOnlyLocal(),
             );
             setTitle('');
             setPostType('static');

@@ -1,5 +1,11 @@
 export type * from './types';
-export { migrateClientToBriefingV2, parseBriefingV2FromBrandGuide, resolveBriefingV2 } from './migrate';
+export {
+    migrateClientToBriefingV2,
+    parseBriefingV2FromBrandGuide,
+    resolveBriefingV2,
+    resolveClientBriefing,
+    isBriefingV2Complete,
+} from './migrate';
 export { syncLegacyBrandGuideFields, applyBriefingToClientFlat } from './syncLegacy';
 export { splitToTags, newId, v2CtaToLegacyLabel, legacyCtaToV2 } from './helpers';
 

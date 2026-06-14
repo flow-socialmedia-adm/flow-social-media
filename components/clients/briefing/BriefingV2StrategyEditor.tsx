@@ -293,20 +293,6 @@ export const BriefingV2StrategyEditor: React.FC<BriefingV2StrategyEditorProps> =
                     placeholder={t('briefing_profile_objective_placeholder')}
                     rows={2}
                 />
-                <SimpleTextarea
-                    label={t('briefing_current_campaign')}
-                    value={briefing.content.currentCampaignObjective}
-                    onChange={(v) => patch((b) => ({ ...b, content: { ...b.content, currentCampaignObjective: v } }))}
-                    placeholder={t('briefing_current_campaign_placeholder')}
-                    rows={2}
-                />
-                <SimpleTextarea
-                    label={t('briefing_month_focus')}
-                    value={briefing.content.monthFocus}
-                    onChange={(v) => patch((b) => ({ ...b, content: { ...b.content, monthFocus: v } }))}
-                    placeholder={t('briefing_month_focus_placeholder')}
-                    rows={2}
-                />
                 <TagsInput
                     label={t('briefing_pillars_tags')}
                     tags={briefing.content.pillarsTags}

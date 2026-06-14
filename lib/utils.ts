@@ -383,7 +383,12 @@ export const resolveColorHex = (c: string | null | undefined): string =>
 // Formats a given Date or ISO/date string to pt-BR short format (dd/MM/yyyy)
 export const formatDateBR = (dateLike?: string | Date | null) => {
     if (!dateLike) return '';
-    const d = typeof dateLike === 'string' ? new Date(dateLike) : dateLike;
+    const d =
+        typeof dateLike === 'string'
+            ? /^\d{4}-\d{2}-\d{2}$/.test(dateLike.slice(0, 10))
+              ? new Date(`${dateLike.slice(0, 10)}T12:00:00.000Z`)
+              : new Date(dateLike)
+            : dateLike;
     if (Number.isNaN(d.getTime())) return '';
-    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(d);
+    return new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }).format(d);
 };

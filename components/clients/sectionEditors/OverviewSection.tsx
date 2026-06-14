@@ -4,6 +4,8 @@ import { getTaskDisplayDate, buildPostFrequency } from '../../../lib/utils';
 import { CalendarIcon, ClipboardListIcon, ClockIcon, CheckCircleIcon, DollarSignIcon, AlertTriangleIcon } from '../../icons';
 import TooltipHint from '../../TooltipHint';
 import { BriefingGlobalProgress } from '../briefing/BriefingGlobalProgress';
+import { getBriefingGlobalProgress } from '../../../lib/clientBriefingProgress';
+import { resolveClientBriefing } from '../../../lib/briefingV2/migrate';
 
 const DAY_I18N: Record<string, string> = {
     mon: 'day_mon', tue: 'day_tue', wed: 'day_wed', thu: 'day_thu',
@@ -70,16 +72,16 @@ export const OverviewSection: React.FC<OverviewSectionProps> = ({
 
     const wf = workflows?.[clientWorkflowId]?.statuses ?? [];
     const generalWf = workflows?.[generalWorkflowId]?.statuses ?? [];
-    const doneIds = new Set([
+    const doneIds = new Set<string>([
         ...wf.filter((s) => s.category === 'done').map((s) => s.id),
         ...generalWf.filter((s) => s.category === 'done').map((s) => s.id),
     ]);
-    const approvalIds = new Set(wf.filter((s) => /aprovacao|aprovado/i.test(s.id)).map((s) => s.id));
-    const publishedIds = new Set(wf.filter((s) => /publicado|agendado/i.test(s.id)).map((s) => s.id));
+    const approvalIds = new Set<string>(wf.filter((s) => /aprovacao|aprovado/i.test(s.id)).map((s) => s.id));
+    const publishedIds = new Set<string>(wf.filter((s) => /publicado|agendado/i.test(s.id)).map((s) => s.id));
 
     const briefingGlobal = useMemo(() => getBriefingGlobalProgress(editedClient), [editedClient]);
-    const briefing = useMemo(() => editedClient.briefingV2 ?? resolveBriefingV2(editedClient), [editedClient]);
-    const pillarTags = briefing.content.pillarsTags.filter((p) => p.trim());
+    const briefing = useMemo(() => resolveClientBriefing(editedClient), [editedClient]);
+    const pillarTags = (briefing.content.pillarsTags ?? []).filter((p) => p.trim());
     const monthFocus = briefing.content.monthFocus?.trim() || '';
 
     const planningFreqLabel = useMemo(() => {

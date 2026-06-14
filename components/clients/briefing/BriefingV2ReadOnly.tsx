@@ -141,13 +141,10 @@ export const BriefingV2ReadOnly: React.FC<{
     };
 
     const renderContent = (b: BriefingV2) => {
-        const has = b.content.profileObjective || b.content.currentCampaignObjective || b.content.monthFocus ||
-            b.content.pillarsTags.length || b.content.strategyNotes;
+        const has = b.content.profileObjective || b.content.pillarsTags.length || b.content.strategyNotes;
         return (
             <BlockShell block="content" title={t('briefing_block_content_title')} desc={t('briefing_block_content_desc')} hasContent={!!has}>
                 <ReadOnlyField label={t('briefing_profile_objective')} value={b.content.profileObjective} multiline />
-                <ReadOnlyField label={t('briefing_current_campaign')} value={b.content.currentCampaignObjective} multiline />
-                <ReadOnlyField label={t('briefing_month_focus')} value={b.content.monthFocus} multiline />
                 <ReadOnlyTags label={t('briefing_pillars_tags')} tags={b.content.pillarsTags} />
                 <ReadOnlyField label={t('briefing_strategy_notes')} value={b.content.strategyNotes} multiline />
             </BlockShell>

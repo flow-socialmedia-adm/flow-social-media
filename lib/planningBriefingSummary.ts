@@ -98,8 +98,8 @@ export function buildPlanningBriefingSummary(
 	if (!briefing.content.pillarsTags.some((p) => p.trim())) {
 		quickActions.push({ id: 'pillars', labelKey: 'planning_quick_action_define_pillars', tab: 'strategy' });
 	}
-	if (!briefing.content.monthFocus?.trim()) {
-		quickActions.push({ id: 'month_focus', labelKey: 'planning_quick_action_define_month_focus', tab: 'strategy' });
+	if (!briefing.content.currentCampaignObjective?.trim()) {
+		quickActions.push({ id: 'month_objective', labelKey: 'planning_quick_action_define_month_objective', tab: 'planning' });
 	}
 	if (!resolveOwnerLabel(client, teamMembers).trim()) {
 		quickActions.push({ id: 'owner', labelKey: 'planning_quick_action_define_owner', tab: 'planning' });
@@ -113,7 +113,7 @@ export function buildPlanningBriefingSummary(
 		contentStatus,
 		frequencyLabel,
 		preferredDaysLabel,
-		objectiveLabel: briefing.content.currentCampaignObjective?.trim() || briefing.content.profileObjective?.trim() || '',
+		objectiveLabel: briefing.content.currentCampaignObjective?.trim() || '',
 		monthFocusLabel: briefing.content.monthFocus?.trim() || '',
 		pillarsLabel: briefing.content.pillarsTags.filter((p) => p.trim()).join(', '),
 		approvalLabel,

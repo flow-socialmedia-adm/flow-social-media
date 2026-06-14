@@ -1,8 +1,7 @@
 import React, { useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { AppContext } from '../contexts/AppContext';
 import type { Client, Task, Language } from '../types';
-import { formatDateToYYYYMMDD, getWeekDaysMondayFirst, getExpectedForWeek, getExpectedForMonth, getDateRangeForForecastPeriod, computeForecastDatesToCreate, getMonthName, getMonthDays, isToday } from '../lib/utils';
-import type { ForecastPeriodKey } from '../lib/utils';
+import { formatDateToYYYYMMDD, getWeekDaysMondayFirst, getExpectedForWeek, computeForecastDatesToCreate, getMonthName, getMonthDays, isToday } from '../lib/utils';
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, FunnelIcon } from './icons';
 import TooltipHint from './TooltipHint';
 import { apiGet, apiPost, apiPut } from '../lib/api';
@@ -32,6 +31,13 @@ import { patchClientBriefing } from '../lib/briefingV2';
 import { savePlanningClient } from '../lib/planningClientSave';
 import { PlanningAgencyCentral } from './planning/PlanningAgencyCentral';
 import { PlanningClientCard } from './planning/PlanningClientCard';
+import { PlanningDayMenu, type PlanningDayMenuState } from './planning/PlanningDayMenu';
+import {
+    canGeneratePlanningForecasts,
+    computeClientMonthlySchedule,
+    getCurrentMonthRange,
+} from '../lib/planningSchedule';
+import type { ItemNature } from './PostOrForecastModal';
 
 const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 
@@ -78,31 +84,6 @@ function buildMonthDayIndicatorTooltip(
     return `${prefix}: ${detail}`;
 }
 
-function groupPlanningDayItemsByClient(
-    items: Task[],
-    clientNameById: Map<string, string>,
-    unknownClientLabel: string,
-) {
-    const groups = new Map<string, Task[]>();
-    for (const item of items) {
-        const clientId = item.clientId || '';
-        if (!groups.has(clientId)) groups.set(clientId, []);
-        groups.get(clientId)!.push(item);
-    }
-    return [...groups.entries()]
-        .map(([clientId, clientItems]) => ({
-            clientId,
-            clientName: clientNameById.get(clientId) || unknownClientLabel,
-            items: [...clientItems].sort((a, b) => {
-                const aForecast = a.category === 'forecast' ? 1 : 0;
-                const bForecast = b.category === 'forecast' ? 1 : 0;
-                if (aForecast !== bForecast) return aForecast - bForecast;
-                return (a.title || '').localeCompare(b.title || '', 'pt-BR');
-            }),
-        }))
-        .sort((a, b) => a.clientName.localeCompare(b.clientName, 'pt-BR'));
-}
-
 const PlanningPage: React.FC = () => {
     const context = useContext(AppContext);
     if (!context) return null;
@@ -123,12 +104,10 @@ const PlanningPage: React.FC = () => {
     const [clients, setClients] = useState<Client[]>([]);
     const [clientFilter, setClientFilter] = useState<string>('all');
     const [loading, setLoading] = useState(true);
-    const [createModal, setCreateModal] = useState<{ clientId: string; clientName: string; date: string } | null>(null);
+    const [createModal, setCreateModal] = useState<{ clientId: string; clientName: string; date: string; initialNature?: ItemNature } | null>(null);
     const [modalTask, setModalTask] = useState<Partial<Task> | null>(null);
-    const [forecastPopoverOpen, setForecastPopoverOpen] = useState(false);
     const [forecastGenerating, setForecastGenerating] = useState(false);
     const [savingClientId, setSavingClientId] = useState<string | null>(null);
-    const forecastPopoverRef = useRef<HTMLDivElement>(null);
     const clientCardRef = useRef<HTMLElement>(null);
     const prevClientFilterRef = useRef<string>('all');
     const isPlanningLocked = clientFilter === 'all';
@@ -137,6 +116,7 @@ const PlanningPage: React.FC = () => {
         const d = new Date();
         return new Date(d.getFullYear(), d.getMonth(), 1);
     });
+    const [dayMenu, setDayMenu] = useState<PlanningDayMenuState | null>(null);
 
     const weekDays = useMemo(() => getWeekDaysMondayFirst(currentWeekStart), [currentWeekStart]);
     const startDate = formatDateToYYYYMMDD(weekDays[0]);
@@ -238,12 +218,10 @@ const PlanningPage: React.FC = () => {
         for (const c of clients) map.set(c.id, c.name);
         return map;
     }, [clients]);
-    const [monthlyDayDetail, setMonthlyDayDetail] = useState<{ date: Date; items: Task[] } | null>(null);
 
     useEffect(() => {
         if (clientFilter === 'all') {
-            setMonthlyDayDetail(null);
-            setForecastPopoverOpen(false);
+            setDayMenu(null);
         }
     }, [clientFilter]);
 
@@ -253,15 +231,8 @@ const PlanningPage: React.FC = () => {
         }
         const client = selectedClient;
         if (!client) return { canGenerateForecasts: false, generateForecastsTooltip: 'planning_generate_forecasts_tooltip' as const };
-        if (client.postFrequencyVariable) {
-            return { canGenerateForecasts: false, generateForecastsTooltip: 'planning_generate_forecasts_tooltip_variable' as const };
-        }
-        const hasValidFrequency =
-            typeof client.postFrequencyQuantity === 'number' &&
-            client.postFrequencyQuantity > 0 &&
-            (client.postFrequencyPeriod === 'week' || client.postFrequencyPeriod === 'month');
-        if (!hasValidFrequency) {
-            return { canGenerateForecasts: false, generateForecastsTooltip: 'planning_generate_forecasts_tooltip_no_frequency' as const };
+        if (!canGeneratePlanningForecasts(client)) {
+            return { canGenerateForecasts: false, generateForecastsTooltip: 'planning_generate_forecasts_tooltip_incomplete' as const };
         }
         return { canGenerateForecasts: true, generateForecastsTooltip: null };
     }, [clientFilter, selectedClient]);
@@ -412,20 +383,20 @@ const PlanningPage: React.FC = () => {
         monday.setHours(0, 0, 0, 0);
         setCurrentWeekStart(monday);
         setPlanningView('weekly');
-        setMonthlyDayDetail(null);
+        setDayMenu(null);
     }, []);
 
     const openTaskInPostsPage = useCallback((taskId: string) => {
         try {
             localStorage.setItem(POSTS_MODAL_TARGET_KEY, taskId);
         } catch {}
-        setMonthlyDayDetail(null);
+        setDayMenu(null);
         setPage('producao');
     }, [setPage]);
 
-    const openCreate = useCallback((clientId: string, clientName: string, date: string) => {
+    const openCreate = useCallback((clientId: string, clientName: string, date: string, initialNature: ItemNature = 'forecast') => {
         setModalTask(null);
-        setCreateModal({ clientId, clientName, date });
+        setCreateModal({ clientId, clientName, date, initialNature });
     }, []);
 
     const closeCreate = useCallback(() => {
@@ -440,7 +411,7 @@ const PlanningPage: React.FC = () => {
             clientName: clientNameById.get(task.clientId || '') || t('planning_client_unknown'),
             date: task.publishDate || task.date || formatDateToYYYYMMDD(new Date()),
         });
-        setMonthlyDayDetail(null);
+        setDayMenu(null);
     }, [clientNameById, t]);
 
     const handleSaveFromModal = useCallback(
@@ -572,24 +543,15 @@ const PlanningPage: React.FC = () => {
         prevClientFilterRef.current = clientFilter;
     }, [clientFilter]);
 
-    useEffect(() => {
-        if (!forecastPopoverOpen) return;
-        const onOutside = (e: MouseEvent) => {
-            if (forecastPopoverRef.current && !forecastPopoverRef.current.contains(e.target as Node)) {
-                setForecastPopoverOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', onOutside);
-        return () => document.removeEventListener('mousedown', onOutside);
-    }, [forecastPopoverOpen]);
-
     const handleGenerateForecasts = useCallback(
-        async (period: ForecastPeriodKey) => {
+        async () => {
             if (!selectedClient || !firstStatusId || !clientWorkflowId || forecastGenerating) return;
             setForecastGenerating(true);
-            setForecastPopoverOpen(false);
             try {
-                const { start, end } = getDateRangeForForecastPeriod(period);
+                const { year, month, start, end } = getCurrentMonthRange();
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const periodStart = start > today ? start : today;
                 const rangeStart = formatDateToYYYYMMDD(start);
                 const rangeEnd = formatDateToYYYYMMDD(end);
                 const resp = await apiGet<{ items: any[] }>('/tasks', {
@@ -609,9 +571,9 @@ const PlanningPage: React.FC = () => {
                 }
                 const datesToCreate = computeForecastDatesToCreate(
                     selectedClient,
-                    start,
+                    periodStart,
                     end,
-                    countByDate
+                    countByDate,
                 );
                 let created = 0;
                 for (const dateStr of datesToCreate) {
@@ -659,7 +621,7 @@ const PlanningPage: React.FC = () => {
                 setForecastGenerating(false);
             }
         },
-        [selectedClient, firstStatusId, clientWorkflowId, forecastGenerating, t, setTasks, notify]
+        [selectedClient, firstStatusId, clientWorkflowId, forecastGenerating, t, setTasks, notify],
     );
 
     const clientFilterOptions = useMemo(
@@ -672,33 +634,10 @@ const PlanningPage: React.FC = () => {
 
     const clientScheduleSummary = useMemo(() => {
         if (!selectedClient || clientFilter === 'all') return null;
-        if (planningView === 'weekly') {
-            const clientItems = planningItems.filter(
-                (p) =>
-                    p.clientId === selectedClient.id &&
-                    (p.publishDate ?? p.date) >= startDate &&
-                    (p.publishDate ?? p.date) <= endDate,
-            );
-            const planned = clientItems.length;
-            const expected = getExpectedForWeek(selectedClient, weekDays);
-            const goal = expected != null ? Math.ceil(expected) : null;
-            const missing = goal != null ? Math.max(0, goal - planned) : null;
-            return { planned, goal, missing };
-        }
         const y = currentMonthAnchor.getFullYear();
         const m = currentMonthAnchor.getMonth();
-        const low = formatDateToYYYYMMDD(new Date(y, m, 1));
-        const hi = formatDateToYYYYMMDD(new Date(y, m + 1, 0));
-        const clientItems = planningItems.filter((p) => {
-            const ds = (p.publishDate ?? p.date ?? '').slice(0, 10);
-            return p.clientId === selectedClient.id && ds >= low && ds <= hi;
-        });
-        const planned = clientItems.length;
-        const expectedRaw = getExpectedForMonth(selectedClient, y, m);
-        const goal = expectedRaw != null ? Math.ceil(expectedRaw) : null;
-        const missing = goal != null ? Math.max(0, goal - planned) : null;
-        return { planned, goal, missing };
-    }, [selectedClient, clientFilter, planningView, planningItems, startDate, endDate, weekDays, currentMonthAnchor]);
+        return computeClientMonthlySchedule(selectedClient.id, planningItems, y, m, selectedClient);
+    }, [selectedClient, clientFilter, planningItems, currentMonthAnchor]);
 
     return (
         <div className="flex min-h-full min-w-0 w-full flex-1 flex-col">
@@ -738,15 +677,12 @@ const PlanningPage: React.FC = () => {
                                 canEditPlanning={canEditPlanning}
                                 canGenerateForecasts={canGenerateForecasts}
                                 generateForecastsTooltip={generateForecastsTooltip}
-                                forecastPopoverOpen={forecastPopoverOpen}
                                 forecastGenerating={forecastGenerating}
-                                forecastPopoverRef={forecastPopoverRef}
                                 teamMembers={agencyProfile?.teamMembers ?? []}
                                 scheduleSummary={clientScheduleSummary}
                                 savingClient={savingClientId === selectedClient?.id}
                                 t={t}
                                 onClientFilterChange={setClientFilter}
-                                onToggleForecastPopover={() => setForecastPopoverOpen((o) => !o)}
                                 onGenerateForecasts={handleGenerateForecasts}
                                 onBriefingPatch={handleBriefingPatch}
                                 onClientPatch={handleClientPatch}
@@ -1086,8 +1022,32 @@ const PlanningPage: React.FC = () => {
                                                     key={idx}
                                                     type="button"
                                                     onClick={() => {
-                                                        if (isCurrentMonth && hasItems) {
-                                                            setMonthlyDayDetail({ date, items: planningMonthItemsByDay.get(ds) || [] });
+                                                        if (!isCurrentMonth) {
+                                                            openWeekContainingDay(date);
+                                                            return;
+                                                        }
+                                                        if (clientFilter !== 'all' && selectedClient) {
+                                                            const filtered =
+                                                                clientFilter === 'all'
+                                                                    ? dayItems
+                                                                    : dayItems.filter((it) => it.clientId === selectedClient.id);
+                                                            setDayMenu({
+                                                                date,
+                                                                dateStr: ds,
+                                                                items: filtered,
+                                                                clientId: selectedClient.id,
+                                                                clientName: selectedClient.name,
+                                                            });
+                                                            return;
+                                                        }
+                                                        if (hasItems) {
+                                                            setDayMenu({
+                                                                date,
+                                                                dateStr: ds,
+                                                                items: dayItems,
+                                                                clientId: '',
+                                                                clientName: '',
+                                                            });
                                                             return;
                                                         }
                                                         openWeekContainingDay(date);
@@ -1134,166 +1094,24 @@ const PlanningPage: React.FC = () => {
                                     <p className="mt-4 text-xs leading-relaxed text-gray-500 dark:text-gray-400">{t('planning_month_heatmap_footer')}</p>
                                 </div>
                             )}
-                                </div>
                             </div>
-                            {planningView === 'monthly' && monthlyDayDetail && !isPlanningLocked && (
-                                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/35 p-4" onClick={() => setMonthlyDayDetail(null)}>
-                                    <div
-                                        className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-4 shadow-xl dark:border-gray-700 dark:bg-gray-900"
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <div className="mb-3 flex items-center justify-between">
-                                            <h4 className="text-base font-semibold text-gray-900 dark:text-white">
-                                                {t('planning_month_detail_title', { date: `${monthlyDayDetail.date.getDate()}/${monthlyDayDetail.date.getMonth() + 1}` })}
-                                            </h4>
-                                            <button type="button" onClick={() => setMonthlyDayDetail(null)} className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">x</button>
-                                        </div>
-                                        <div className="max-h-[min(60vh,28rem)] space-y-4 overflow-y-auto pr-1">
-                                            {groupPlanningDayItemsByClient(
-                                                monthlyDayDetail.items,
-                                                clientNameById,
-                                                t('planning_client_unknown'),
-                                            ).map((group) => (
-                                                <section key={group.clientId}>
-                                                    <h5 className="mb-2 border-b border-gray-200 pb-1 text-sm font-semibold text-gray-900 dark:border-gray-700 dark:text-white">
-                                                        {group.clientName}
-                                                    </h5>
-                                                    <div className="space-y-2">
-                                                        {group.items.map((item) => {
-                                                            const isForecast = isForecastTask(item);
-                                                            const status = clientWorkflow?.statuses?.find((s) => s.id === item.statusId);
-                                                            const postTypeLabel = item.postType ? t(item.postType) || item.postType : '';
-                                                            const statusLabel = status ? t(status.nameKey) : '';
-                                                            const secondary = isForecast
-                                                                ? t('planning_forecast')
-                                                                : [postTypeLabel, statusLabel].filter(Boolean).join(' · ');
-                                                            const title =
-                                                                item.title ||
-                                                                (isForecast ? t('planning_forecast_type') : t('planning_draft_default_title'));
-
-                                                            return (
-                                                                <div
-                                                                    key={item.id}
-                                                                    className={`rounded-lg border bg-gray-50/80 p-2.5 dark:bg-gray-800/60 ${
-                                                                        isForecast
-                                                                            ? 'border-dashed border-slate-300 dark:border-slate-600'
-                                                                            : 'border-gray-200 dark:border-gray-700'
-                                                                    }`}
-                                                                >
-                                                                    <div className="text-sm font-semibold text-gray-900 dark:text-white">{title}</div>
-                                                                    {secondary ? (
-                                                                        <div className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{secondary}</div>
-                                                                    ) : null}
-                                                                    <div className="mt-2 flex flex-wrap gap-2">
-                                                                        {isForecast ? (
-                                                                            <>
-                                                                                <TooltipHint label={t('planning_month_convert_here_hint')}>
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() => openEditInPlanning(item)}
-                                                                                        className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-                                                                                    >
-                                                                                        {t('planning_month_convert_here')}
-                                                                                    </button>
-                                                                                </TooltipHint>
-                                                                                <TooltipHint label={t('planning_month_edit_planning_hint')}>
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() => openEditInPlanning(item)}
-                                                                                        className="rounded-md border border-gray-300 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700"
-                                                                                    >
-                                                                                        {t('planning_month_edit_planning')}
-                                                                                    </button>
-                                                                                </TooltipHint>
-                                                                                <TooltipHint
-                                                                                    label={
-                                                                                        !canViewPosts
-                                                                                            ? t('planning_month_no_posts_permission')
-                                                                                            : t('planning_month_open_in_posts_hint')
-                                                                                    }
-                                                                                >
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        disabled={!canViewPosts}
-                                                                                        onClick={() => openTaskInPostsPage(item.id)}
-                                                                                        className={`rounded-md border px-2.5 py-1 text-xs font-medium ${canViewPosts ? 'border-indigo-200 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-900/30' : 'cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-700 dark:text-gray-500'}`}
-                                                                                    >
-                                                                                        {t('planning_month_open_in_posts')}
-                                                                                    </button>
-                                                                                </TooltipHint>
-                                                                            </>
-                                                                        ) : (
-                                                                            <>
-                                                                                <TooltipHint label={t('planning_month_edit_here_hint')}>
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        onClick={() => openEditInPlanning(item)}
-                                                                                        className="rounded-md border border-indigo-200 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
-                                                                                    >
-                                                                                        {t('planning_month_edit_here')}
-                                                                                    </button>
-                                                                                </TooltipHint>
-                                                                                <TooltipHint
-                                                                                    label={
-                                                                                        !canViewPosts
-                                                                                            ? t('planning_month_no_posts_permission')
-                                                                                            : t('planning_month_open_in_posts_hint')
-                                                                                    }
-                                                                                >
-                                                                                    <button
-                                                                                        type="button"
-                                                                                        disabled={!canViewPosts}
-                                                                                        onClick={() => openTaskInPostsPage(item.id)}
-                                                                                        className={`rounded-md border px-2.5 py-1 text-xs font-medium ${canViewPosts ? 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700' : 'cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-700 dark:text-gray-500'}`}
-                                                                                    >
-                                                                                        {t('planning_month_open_in_posts')}
-                                                                                    </button>
-                                                                                </TooltipHint>
-                                                                            </>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                </section>
-                                            ))}
-                                        </div>
-                                        <div className="mt-3 border-t border-gray-200 pt-3 dark:border-gray-700">
-                                                <div className="flex flex-wrap gap-2">
-                                                    <TooltipHint
-                                                        label={!canViewPosts ? t('planning_month_no_posts_permission') : t('planning_month_go_posts_hint')}
-                                                    >
-                                                        <button
-                                                            type="button"
-                                                            disabled={!canViewPosts}
-                                                            onClick={() => {
-                                                                setMonthlyDayDetail(null);
-                                                                if (canViewPosts) setPage('producao');
-                                                            }}
-                                                            className={`rounded-md border px-3 py-1.5 text-xs font-medium ${canViewPosts ? 'border-gray-300 text-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:text-gray-200 dark:hover:bg-gray-700' : 'cursor-not-allowed border-gray-200 text-gray-400 dark:border-gray-700 dark:text-gray-500'}`}
-                                                        >
-                                                            {t('planning_month_go_posts')}
-                                                        </button>
-                                                    </TooltipHint>
-                                                    <TooltipHint label={t('planning_month_open_week_hint')}>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => openWeekContainingDay(monthlyDayDetail.date)}
-                                                            className="rounded-md border border-indigo-200 px-3 py-1.5 text-xs font-medium text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
-                                                        >
-                                                            {t('planning_month_open_week')}
-                                                        </button>
-                                                    </TooltipHint>
-                                                </div>
-                                            </div>
-                                    </div>
-                                </div>
-                            )}
+                            </div>
                         </>
                     )}
                 </div>
             </main>
+
+            <PlanningDayMenu
+                menu={dayMenu}
+                canEdit={canEditPlanning && !isPlanningLocked}
+                canViewPosts={canViewPosts}
+                t={t}
+                onClose={() => setDayMenu(null)}
+                onCreatePost={(cid, cname, date) => openCreate(cid, cname, date, 'post')}
+                onCreateForecast={(cid, cname, date) => openCreate(cid, cname, date, 'forecast')}
+                onEditHere={openEditInPlanning}
+                onOpenInPosts={openTaskInPostsPage}
+            />
 
             {createModal && (
                 <PostOrForecastModal
@@ -1304,7 +1122,13 @@ const PlanningPage: React.FC = () => {
                     context={context}
                     clientsForSelect={clients.map((c) => ({ id: c.id, name: c.name }))}
                     onQuickCreateClient={() => setPage('clients')}
-                    initialNature={modalTask ? (modalTask.category === 'forecast' ? 'forecast' : 'post') : 'forecast'}
+                    initialNature={
+                        modalTask
+                            ? modalTask.category === 'forecast'
+                                ? 'forecast'
+                                : 'post'
+                            : createModal.initialNature ?? 'forecast'
+                    }
                     initialDate={createModal.date}
                     initialClientId={createModal.clientId}
                     initialClientName={createModal.clientName}

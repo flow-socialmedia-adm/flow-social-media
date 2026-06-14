@@ -48,9 +48,10 @@ type CreateTaskDto = {
 
 type UpdateTaskDto = Partial<CreateTaskDto>;
 
+import { dateOnlyRangeFilter, formatDateOnly, parseDateOnly } from '../common/date-only';
+
 function toDateStr(d: Date | null | undefined): string | null {
-	if (!d) return null;
-	return d.toISOString().slice(0, 10);
+	return formatDateOnly(d);
 }
 
 @Injectable()
@@ -443,7 +444,7 @@ export class TasksService {
 		const agencyId = this.ctx.get()?.agencyId!;
 		const today = new Date();
 		const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-		const todayDate = new Date(`${todayStr}T00:00:00`);
+		const todayDate = parseDateOnly(todayStr);
 		const wipThreshold = Math.max(1, input.wipThreshold ?? 8);
 		const staleProductionDays = Math.max(1, input.staleProductionDays ?? 14);
 		const staleDate = new Date(todayDate);
@@ -704,10 +705,7 @@ export class TasksService {
 			ownerUserId: filters.ownerUserId || undefined,
 			date:
 				filters.startDate || filters.endDate
-					? {
-							gte: filters.startDate ? new Date(filters.startDate) : undefined,
-							lte: filters.endDate ? new Date(filters.endDate) : undefined,
-					  }
+					? dateOnlyRangeFilter(filters.startDate, filters.endDate)
 					: undefined,
 		} as any;
 		const skip = (page - 1) * pageSize;
@@ -731,7 +729,7 @@ export class TasksService {
 		clientId: string,
 		publishDateStr: string,
 	) {
-		const publishDate = new Date(`${publishDateStr}T00:00:00`);
+		const publishDate = parseDateOnly(publishDateStr);
 		return this.prisma.task.findFirst({
 			where: {
 				agencyId,
@@ -841,7 +839,7 @@ export class TasksService {
 				throw new Error('Previsão de entrega é obrigatória para tarefa.');
 			}
 		}
-		const parsedDate = new Date(`${mainDateStr}T00:00:00`);
+		const parsedDate = parseDateOnly(mainDateStr);
 
 		let ownerUserId: string | null = null;
 		if (agency.mode === 'SOLO') {
@@ -1000,17 +998,17 @@ export class TasksService {
 		if (data.currentActionId !== undefined) updateData.currentActionId = data.currentActionId;
 
 		if (data.publishDate !== undefined) {
-			const d = new Date((data.publishDate || '').slice(0, 10) + 'T00:00:00');
+			const d = parseDateOnly((data.publishDate || '').slice(0, 10));
 			updateData.date = d;
 			updateData.publishDate = d;
 			updateData.isProvisionalPublishDate = data.isProvisionalPublishDate ?? false;
 		} else if (data.dueDate !== undefined) {
-			const d = new Date((data.dueDate || '').slice(0, 10) + 'T00:00:00');
+			const d = parseDateOnly((data.dueDate || '').slice(0, 10));
 			updateData.date = d;
 			updateData.dueDate = d;
 			updateData.isProvisionalDueDate = data.isProvisionalDueDate ?? false;
 		} else if (data.date !== undefined) {
-			updateData.date = new Date((data.date || '').slice(0, 10) + 'T00:00:00');
+			updateData.date = parseDateOnly((data.date || '').slice(0, 10));
 		}
 
 		if (agency?.mode === 'SOLO') {
@@ -1184,7 +1182,7 @@ export class TasksService {
 
 	async moveDate(id: string, dateStr: string) {
 		const agencyId = this.ctx.get()?.agencyId!;
-		const parsed = new Date((dateStr || '').slice(0, 10) + 'T00:00:00');
+		const parsed = parseDateOnly((dateStr || '').slice(0, 10));
 		const task = await this.prisma.task.findFirst({
 			where: { id, agencyId },
 			select: {

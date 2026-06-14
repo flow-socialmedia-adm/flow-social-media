@@ -256,12 +256,31 @@ export function parseBriefingV2FromBrandGuide(brandGuide: Record<string, unknown
     return b;
 }
 
+/** Garante estrutura aninhada mínima — evita crash com JSON parcial da API. */
+export function isBriefingV2Complete(b: BriefingV2 | null | undefined): b is BriefingV2 {
+    if (!b || b.schemaVersion !== 2) return false;
+    if (!b.strategy || !b.audience || !b.communication || !b.content || !b.planning) return false;
+    if (!Array.isArray(b.strategy.marketReferences)) return false;
+    if (!Array.isArray(b.content.pillarsTags)) return false;
+    if (!Array.isArray(b.planning.preferredPostDays)) return false;
+    if (!b.planning.frequency || !b.planning.operation) return false;
+    return true;
+}
+
+/** Briefing seguro a partir do Client — re-migra se V2 estiver incompleto. */
+export function resolveClientBriefing(client: Client): BriefingV2 {
+    if (isBriefingV2Complete(client.briefingV2)) return client.briefingV2;
+    return migrateClientToBriefingV2(client);
+}
+
 /** Resolve briefing: V2 canônico ou migração a partir de V1. */
 export function resolveBriefingV2(
     c: ClientLike,
     brandGuide: Record<string, unknown> = {},
 ): BriefingV2 {
-    const existing = parseBriefingV2FromBrandGuide(brandGuide);
-    if (existing) return existing;
+    const fromGuide = parseBriefingV2FromBrandGuide(brandGuide);
+    if (fromGuide && isBriefingV2Complete(fromGuide)) return fromGuide;
+    const fromClient = c.briefingV2 as BriefingV2 | undefined;
+    if (fromClient && isBriefingV2Complete(fromClient)) return fromClient;
     return migrateClientToBriefingV2(c, brandGuide);
 }

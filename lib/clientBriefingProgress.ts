@@ -1,6 +1,6 @@
 import type { Client } from '../types';
 import type { BriefingBlock, BriefingV2 } from './briefingV2/types';
-import { resolveBriefingV2 } from './briefingV2/migrate';
+import { resolveClientBriefing } from './briefingV2/migrate';
 
 export interface BlockProgress {
     filled: number;
@@ -55,7 +55,7 @@ export function getBriefingBlockProgressFromBriefing(briefing: BriefingV2, block
                 isFilledTags(briefing.strategy.mainServicesTags),
                 isFilledString(briefing.strategy.differentiators),
                 isFilledString(briefing.strategy.perceivedAs),
-                briefing.strategy.marketReferences.some((r) => r.name?.trim()),
+                (briefing.strategy.marketReferences ?? []).some((r) => r.name?.trim()),
             ].filter(Boolean).length;
             return { filled, total: 5, labelKey: BLOCK_LABEL_KEYS.strategy };
         }
@@ -80,12 +80,10 @@ export function getBriefingBlockProgressFromBriefing(briefing: BriefingV2, block
         case 'content': {
             const filled = [
                 isFilledString(briefing.content.profileObjective),
-                isFilledString(briefing.content.currentCampaignObjective),
-                isFilledString(briefing.content.monthFocus),
-                isFilledTags(briefing.content.pillarsTags),
+                isFilledTags(briefing.content.pillarsTags ?? []),
                 isFilledString(briefing.content.strategyNotes),
             ].filter(Boolean).length;
-            return { filled, total: 5, labelKey: BLOCK_LABEL_KEYS.content };
+            return { filled, total: 3, labelKey: BLOCK_LABEL_KEYS.content };
         }
         case 'planning': {
             const freq = briefing.planning.frequency;
@@ -95,7 +93,7 @@ export function getBriefingBlockProgressFromBriefing(briefing: BriefingV2, block
                 : isFilledNumber(freq.quantity) && isFilledEnum(freq.period);
             const filled = [
                 freqFilled,
-                briefing.planning.preferredPostDays.length > 0,
+                (briefing.planning.preferredPostDays ?? []).length > 0,
                 isFilledNumber(op.productionLeadDays),
                 isFilledNumber(op.approvalLeadDays),
                 isFilledNumber(op.schedulingLeadDays),
@@ -112,12 +110,12 @@ export function getBriefingBlockProgressFromBriefing(briefing: BriefingV2, block
 }
 
 export function getBriefingBlockProgress(client: Client, block: BriefingBlock): BlockProgress {
-    const briefing = client.briefingV2 ?? resolveBriefingV2(client);
+    const briefing = resolveClientBriefing(client);
     return getBriefingBlockProgressFromBriefing(briefing, block);
 }
 
 export function getAllBriefingBlockProgress(client: Client): Record<BriefingBlock, BlockProgress> {
-    const briefing = client.briefingV2 ?? resolveBriefingV2(client);
+    const briefing = resolveClientBriefing(client);
     return {
         strategy: getBriefingBlockProgressFromBriefing(briefing, 'strategy'),
         audience: getBriefingBlockProgressFromBriefing(briefing, 'audience'),
