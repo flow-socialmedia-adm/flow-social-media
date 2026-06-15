@@ -36,6 +36,7 @@ import {
     canGeneratePlanningForecasts,
     computeClientMonthlySchedule,
     getCurrentMonthRange,
+    logClientMonthlyScheduleAudit,
 } from '../lib/planningSchedule';
 import type { ItemNature } from './PostOrForecastModal';
 
@@ -634,9 +635,11 @@ const PlanningPage: React.FC = () => {
 
     const clientScheduleSummary = useMemo(() => {
         if (!selectedClient || clientFilter === 'all') return null;
-        const y = currentMonthAnchor.getFullYear();
-        const m = currentMonthAnchor.getMonth();
-        return computeClientMonthlySchedule(selectedClient.id, planningItems, y, m, selectedClient);
+        const summary = computeClientMonthlySchedule(selectedClient, planningItems, currentMonthAnchor);
+        if (import.meta.env.DEV && /janete/i.test(selectedClient.name || '')) {
+            logClientMonthlyScheduleAudit(selectedClient, summary);
+        }
+        return summary;
     }, [selectedClient, clientFilter, planningItems, currentMonthAnchor]);
 
     return (

@@ -2,6 +2,7 @@ import type { Client, Task } from '../types';
 import type { BriefingV2 } from './briefingV2/types';
 import { resolveClientBriefing } from './briefingV2/migrate';
 import { clientHasStructuredFrequency } from './clientContext';
+import { normalizeDateOnly } from './dateOnly';
 import {
 	countCalendarWeeksInMonth,
 	formatDateToYYYYMMDD,
@@ -16,26 +17,39 @@ function normalizePlanningQuantity(value: unknown): number | null {
 	return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/** Aceita 'month', 'monthly', 'mensal', etc. — alinhado ao que a UI de frequência exibe. */
+export function normalizePlanningPeriod(value: unknown): 'week' | 'month' | null {
+	if (value === 'week' || value === 'month') return value;
+	if (typeof value !== 'string' || !value.trim()) return null;
+	const s = value.trim().toLowerCase();
+	if (s === 'weekly' || s === 'semana' || s.includes('week') || s.includes('semana')) return 'week';
+	if (s === 'monthly' || s === 'mensal' || s.includes('month') || s.includes('mês') || s.includes('mes')) return 'month';
+	return null;
+}
+
 /** Frequência canônica do planejamento: briefing V2 → campos flat → string legada. */
 export function resolvePlanningFrequency(client: Client): PlanningFrequency | null {
 	const briefing = resolveClientBriefing(client);
 	const freq = briefing.planning.frequency;
 	if (freq.variable || client.postFrequencyVariable) return null;
 
-	// Briefing V2 é fonte primária — qty e period sempre do mesmo bloco (sem misturar com flat).
 	const briefingQty = normalizePlanningQuantity(freq.quantity);
-	const briefingPeriod = freq.period;
-	if (briefingQty != null && (briefingPeriod === 'week' || briefingPeriod === 'month')) {
+	const briefingPeriod = normalizePlanningPeriod(freq.period);
+	if (briefingQty != null && briefingPeriod != null) {
 		return { quantity: briefingQty, period: briefingPeriod };
 	}
 
 	const flatQty = normalizePlanningQuantity(client.postFrequencyQuantity);
-	const flatPeriod = client.postFrequencyPeriod;
-	if (flatQty != null && (flatPeriod === 'week' || flatPeriod === 'month')) {
+	const flatPeriod = normalizePlanningPeriod(client.postFrequencyPeriod);
+	if (flatQty != null && flatPeriod != null) {
 		return { quantity: flatQty, period: flatPeriod };
 	}
 
-	return parsePostFrequencyStructured(client.postFrequency);
+	const parsed = parsePostFrequencyStructured(client.postFrequency);
+	if (!parsed) return null;
+	const parsedPeriod = normalizePlanningPeriod(parsed.period);
+	if (parsedPeriod == null) return null;
+	return { quantity: parsed.quantity, period: parsedPeriod };
 }
 
 /**
@@ -50,9 +64,32 @@ export function getMonthlyPlanningGoal(client: Client, year: number, month: numb
 	return resolved.quantity * countCalendarWeeksInMonth(year, month);
 }
 
+export type ScheduleAuditItem = {
+	taskId: string;
+	title: string;
+	clientId: string;
+	dateOriginal: string;
+	dateNormalized: string;
+	monthConsidered: string;
+	postType: string;
+	category: string;
+	bornAsForecast: string;
+	statusId: string;
+	counted: boolean;
+	reason: string;
+};
+
 export type ClientScheduleSummary = {
-	planned: number;
+	monthStart: string;
+	monthEnd: string;
 	goal: number | null;
+	plannedCount: number;
+	remainingCount: number | null;
+	countedItems: ScheduleAuditItem[];
+	ignoredItems: ScheduleAuditItem[];
+	/** Alias para tag — igual a plannedCount */
+	planned: number;
+	/** Alias para tag — igual a remainingCount */
 	missing: number | null;
 };
 
@@ -63,31 +100,102 @@ export function taskOccupiesPlanningSlot(task: Pick<Task, 'postType' | 'category
 }
 
 export function getTaskPlanningDate(task: Pick<Task, 'publishDate' | 'date'>): string {
-	return (task.publishDate ?? task.date ?? '').slice(0, 10);
+	return normalizeDateOnly(task.publishDate ?? task.date) ?? '';
 }
 
-/** Contagem mensal canônica para tag "Posts planejados: X/Y". */
+function buildAuditRow(task: Task, monthKey: string, counted: boolean, reason: string): ScheduleAuditItem {
+	const raw = (task.publishDate ?? task.date ?? '').toString();
+	const normalized = getTaskPlanningDate(task);
+	return {
+		taskId: task.id,
+		title: task.title || '',
+		clientId: task.clientId || '',
+		dateOriginal: raw,
+		dateNormalized: normalized,
+		monthConsidered: monthKey,
+		postType: task.postType ?? '',
+		category: task.category ?? '',
+		bornAsForecast: task.bornAsForecast === true ? 'true' : task.bornAsForecast === false ? 'false' : '',
+		statusId: task.statusId ?? '',
+		counted,
+		reason,
+	};
+}
+
+/**
+ * Contagem mensal canônica para tag "Posts planejados: X/Y".
+ * monthAnchor: 1º dia do mês civil visível no calendário (currentMonthAnchor).
+ */
 export function computeClientMonthlySchedule(
-	clientId: string,
-	items: Task[],
-	year: number,
-	month: number,
 	client: Client,
+	items: Task[],
+	monthAnchor: Date,
 ): ClientScheduleSummary {
-	const low = formatDateToYYYYMMDD(new Date(year, month, 1));
-	const hi = formatDateToYYYYMMDD(new Date(year, month + 1, 0));
+	const year = monthAnchor.getFullYear();
+	const month = monthAnchor.getMonth();
+	const monthStart = formatDateToYYYYMMDD(new Date(year, month, 1));
+	const monthEnd = formatDateToYYYYMMDD(new Date(year, month + 1, 0));
+	const monthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
 
-	const planned = items.filter(
-		(p) =>
-			p.clientId === clientId &&
-			taskOccupiesPlanningSlot(p) &&
-			getTaskPlanningDate(p) >= low &&
-			getTaskPlanningDate(p) <= hi,
-	).length;
+	const countedItems: ScheduleAuditItem[] = [];
+	const ignoredItems: ScheduleAuditItem[] = [];
 
+	for (const task of items) {
+		if (task.clientId !== client.id) {
+			ignoredItems.push(buildAuditRow(task, monthKey, false, 'wrong_client'));
+			continue;
+		}
+		if (task.isGeneral) {
+			ignoredItems.push(buildAuditRow(task, monthKey, false, 'general_task'));
+			continue;
+		}
+		if (!taskOccupiesPlanningSlot(task)) {
+			ignoredItems.push(buildAuditRow(task, monthKey, false, 'not_planning_slot'));
+			continue;
+		}
+		const dateNorm = getTaskPlanningDate(task);
+		if (!dateNorm) {
+			ignoredItems.push(buildAuditRow(task, monthKey, false, 'missing_date'));
+			continue;
+		}
+		if (dateNorm < monthStart || dateNorm > monthEnd) {
+			ignoredItems.push(buildAuditRow(task, monthKey, false, 'outside_visible_month'));
+			continue;
+		}
+		countedItems.push(buildAuditRow(task, monthKey, true, 'counts_as_planned_slot'));
+	}
+
+	const plannedCount = countedItems.length;
 	const goal = getMonthlyPlanningGoal(client, year, month);
-	const missing = goal != null ? Math.max(0, goal - planned) : null;
-	return { planned, goal, missing };
+	const remainingCount = goal != null ? Math.max(0, goal - plannedCount) : null;
+
+	return {
+		monthStart,
+		monthEnd,
+		goal,
+		plannedCount,
+		remainingCount,
+		countedItems,
+		ignoredItems,
+		planned: plannedCount,
+		missing: remainingCount,
+	};
+}
+
+/** Log de auditoria (dev) — tabela completa para diagnóstico X/Y. */
+export function logClientMonthlyScheduleAudit(client: Client, summary: ClientScheduleSummary): void {
+	const freq = resolvePlanningFrequency(client);
+	const rows = [...summary.countedItems, ...summary.ignoredItems];
+	// eslint-disable-next-line no-console
+	console.group(`[PlanningScheduleAudit] ${client.name} (${summary.monthStart}..${summary.monthEnd})`);
+	// eslint-disable-next-line no-console
+	console.log('frequency resolved:', freq);
+	// eslint-disable-next-line no-console
+	console.log('goal (Y):', summary.goal, '| planned (X):', summary.plannedCount, '| remaining:', summary.remainingCount);
+	// eslint-disable-next-line no-console
+	console.table(rows);
+	// eslint-disable-next-line no-console
+	console.groupEnd();
 }
 
 export function clientHasMonthObjective(client: Client): boolean {

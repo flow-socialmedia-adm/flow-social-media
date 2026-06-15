@@ -23,19 +23,43 @@ Fonte canônica: `getMonthlyPlanningGoal(cliente, ano, mês)` em `lib/planningSc
 
 Resolução de frequência (ordem): `briefing.planning.frequency` → campos flat (`postFrequencyQuantity` / `postFrequencyPeriod`) → string legada (`parsePostFrequencyStructured`).
 
+Quantidade e período são normalizados (`normalizePlanningQuantity`, `normalizePlanningPeriod`) — aceita `"4"`, `"monthly"`, `"mensal"`, etc. Briefing e flat **nunca são misturados** (qty de um + period de outro).
+
 **Mês com 5 semanas:** não altera a meta de clientes **por mês**; gera apenas alerta informativo de distribuição na Central da Agência (`intel_month_five_weeks`). Clientes **por semana** têm meta proporcional ao número real de semanas do mês.
 
 ### Contagem (X) — slot ocupado
 
-Um item conta **1 slot** se:
+Fonte canônica: `computeClientMonthlySchedule(client, tasks, monthAnchor)`.
 
-1. Possui `clientId`, não é tarefa geral (`isGeneral === false`), **e**
-2. **Post real:** `postType` definido e `category !== 'forecast'`, **ou**
-3. **Previsão:** `category === 'forecast'`.
+Retorna `plannedCount`, `goal`, `remainingCount`, `countedItems[]`, `ignoredItems[]`.
 
-**Status de workflow não altera a contagem.** Posts em produção, aguardando aprovação, aprovados, agendados e publicados contam igualmente, desde que tenham `postType` (post real) ou sejam previsão.
+Um item conta **1 slot** (`plannedCount`) se:
 
-**Data do slot:** `publishDate ?? date` (string `YYYY-MM-DD`, primeiros 10 caracteres). O item entra no mês se a data estiver entre o 1º e o último dia do mês (inclusive).
+1. `clientId` = cliente selecionado;
+2. Não é tarefa geral (`isGeneral === false`);
+3. **Post real** (`postType`) **ou previsão** (`category === 'forecast'`);
+4. Data normalizada (`normalizeDateOnly` em `publishDate ?? date`) dentro do mês civil visível (`monthStart`..`monthEnd`).
+
+**Não conta:** tarefas gerais, posts de outros clientes, itens sem data, itens fora do mês visível, tarefas sem `postType` e sem `category=forecast`.
+
+**Status de workflow não altera a contagem.**
+
+Motivos de exclusão (audit): `wrong_client`, `general_task`, `not_planning_slot`, `missing_date`, `outside_visible_month`.
+
+### Visão Geral do Cliente (métrica diferente)
+
+A aba **Cliente > Visão Geral** usa `postsThisMonth`: conta **todas** as tasks do cliente com data no mês civil atual (`getTaskDisplayDate`), **sem** filtrar post/previsão/tarefa geral.
+
+| Tela | Métrica | Escopo |
+|------|---------|--------|
+| **Planejamento de Conteúdo** | `Posts planejados: X/Y` | Slots de planejamento (post + previsão) no **mês visível** |
+| **Visão Geral** | "Posts do mês" (`overview_posts_month`) | Todas as tasks datadas no mês civil **atual** (pode incluir tarefas, histórico misturado) |
+
+Números podem divergir (ex.: 7 na Visão Geral vs 4 no Planejamento). Planejamento **nunca** mistura histórico fora do mês visível.
+
+### Auditoria (dev)
+
+Com cliente Janete selecionado em dev, `logClientMonthlyScheduleAudit` imprime tabela no console com cada task, data normalizada e motivo de inclusão/exclusão.
 
 ### Exibição
 
@@ -48,8 +72,8 @@ Não alternar para "Faltam: N" na tag executiva.
 
 ### Implementação
 
-- `lib/planningSchedule.ts` — `resolvePlanningFrequency`, `getMonthlyPlanningGoal`, `taskOccupiesPlanningSlot`, `getTaskPlanningDate`, `computeClientMonthlySchedule`.
-- `lib/utils.ts` — `countCalendarWeeksInMonth`, `getExpectedForMonth` (compatibilidade para geração de previsões com campos flat).
+- `lib/planningSchedule.ts` — `computeClientMonthlySchedule`, `resolvePlanningFrequency`, `normalizePlanningPeriod`, `getMonthlyPlanningGoal`, `logClientMonthlyScheduleAudit`.
+- `lib/dateOnly.ts` — `normalizeDateOnly` para datas de slot.
 - Consumido em `PlanningPage.tsx` → `PlanningExecutiveTags`.
 
 ---
