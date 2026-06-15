@@ -17,26 +17,53 @@ function normalizePlanningQuantity(value: unknown): number | null {
 	return Number.isFinite(n) && n > 0 ? n : null;
 }
 
-/** Aceita 'month', 'monthly', 'mensal', etc. — alinhado ao que a UI de frequência exibe. */
+function stripAccents(s: string): string {
+	return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+
+/** Aceita 'month', 'monthly', 'mensal', 'mês', etc. — alinhado ao que a UI de frequência exibe. */
 export function normalizePlanningPeriod(value: unknown): 'week' | 'month' | null {
 	if (value === 'week' || value === 'month') return value;
 	if (typeof value !== 'string' || !value.trim()) return null;
 	const s = value.trim().toLowerCase();
-	if (s === 'weekly' || s === 'semana' || s.includes('week') || s.includes('semana')) return 'week';
-	if (s === 'monthly' || s === 'mensal' || s.includes('month') || s.includes('mês') || s.includes('mes')) return 'month';
+	const ascii = stripAccents(s);
+	if (s === 'weekly' || ascii.includes('week') || ascii.includes('semana')) return 'week';
+	if (s === 'monthly' || s === 'mensal' || s === 'mês' || ascii === 'mes' || ascii.includes('month') || ascii.includes('mes'))
+		return 'month';
 	return null;
 }
 
-/** Frequência canônica do planejamento: briefing V2 → campos flat → string legada. */
+/** Período do briefing — espelha formatFriendlyFrequency (só 'week' literal é semanal). */
+function resolveBriefingFrequencyPeriod(period: unknown): 'week' | 'month' | null {
+	const normalized = normalizePlanningPeriod(period);
+	if (normalized) return normalized;
+	if (period == null || period === '') return null;
+	if (typeof period === 'string' && period.trim().toLowerCase() === 'week') return 'week';
+	return 'month';
+}
+
+/** Frequência canônica do planejamento: briefing V2 → string legada → campos flat. */
 export function resolvePlanningFrequency(client: Client): PlanningFrequency | null {
 	const briefing = resolveClientBriefing(client);
 	const freq = briefing.planning.frequency;
 	if (freq.variable || client.postFrequencyVariable) return null;
 
 	const briefingQty = normalizePlanningQuantity(freq.quantity);
-	const briefingPeriod = normalizePlanningPeriod(freq.period);
+	const briefingPeriod = resolveBriefingFrequencyPeriod(freq.period);
 	if (briefingQty != null && briefingPeriod != null) {
 		return { quantity: briefingQty, period: briefingPeriod };
+	}
+
+	const parsed = parsePostFrequencyStructured(client.postFrequency);
+	if (parsed) {
+		const parsedPeriod = normalizePlanningPeriod(parsed.period);
+		if (parsedPeriod != null) {
+			return { quantity: parsed.quantity, period: parsedPeriod };
+		}
+	}
+
+	if (briefingQty != null && parsed?.period === 'month') {
+		return { quantity: briefingQty, period: 'month' };
 	}
 
 	const flatQty = normalizePlanningQuantity(client.postFrequencyQuantity);
@@ -45,11 +72,7 @@ export function resolvePlanningFrequency(client: Client): PlanningFrequency | nu
 		return { quantity: flatQty, period: flatPeriod };
 	}
 
-	const parsed = parsePostFrequencyStructured(client.postFrequency);
-	if (!parsed) return null;
-	const parsedPeriod = normalizePlanningPeriod(parsed.period);
-	if (parsedPeriod == null) return null;
-	return { quantity: parsed.quantity, period: parsedPeriod };
+	return null;
 }
 
 /**
@@ -180,6 +203,29 @@ export function computeClientMonthlySchedule(
 		planned: plannedCount,
 		missing: remainingCount,
 	};
+}
+
+export type PlanningTagTracePayload = {
+	stage: string;
+	clientName: string;
+	monthAnchor: string;
+	frequencyResolved: PlanningFrequency | null;
+	monthlyGoalFromSchedule: number | null;
+	plannedCountFromSchedule: number;
+	remainingCountFromSchedule: number | null;
+	scheduleSummaryReceivedByCard?: ClientScheduleSummary | null;
+	scheduleSummaryReceivedByTags?: ClientScheduleSummary | null;
+	labelRendered?: string;
+	briefingFrequencyRaw?: unknown;
+	flatFrequency?: { qty: unknown; period: unknown; postFrequency?: string };
+};
+
+/** Trace dev da cadeia PlanningPage → tags (Janete). */
+export function logPlanningTagTrace(payload: PlanningTagTracePayload): void {
+	if (typeof import.meta !== 'undefined' && !import.meta.env?.DEV) return;
+	if (!/janete/i.test(payload.clientName || '')) return;
+	// eslint-disable-next-line no-console
+	console.log('[PlanningTagTrace]', payload);
 }
 
 /** Log de auditoria (dev) — tabela completa para diagnóstico X/Y. */

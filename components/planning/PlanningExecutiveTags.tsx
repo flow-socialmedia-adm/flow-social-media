@@ -11,6 +11,7 @@ import {
 	formatScheduleIndicator,
 } from '../../lib/planningFriendlyLabels';
 import type { ClientScheduleSummary } from '../../lib/planningSchedule';
+import { logPlanningTagTrace, resolvePlanningFrequency } from '../../lib/planningSchedule';
 
 const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 type DayKey = (typeof DAY_ORDER)[number];
@@ -91,8 +92,30 @@ export const PlanningExecutiveTags: React.FC<PlanningExecutiveTagsProps> = ({
 			    : '';
 
 	const scheduleTag = scheduleSummary
-		? formatScheduleIndicator(scheduleSummary.planned, scheduleSummary.goal, scheduleSummary.missing, t)
+		? formatScheduleIndicator(
+				scheduleSummary.plannedCount,
+				scheduleSummary.goal,
+				scheduleSummary.remainingCount,
+				t,
+			)
 		: null;
+	const scheduleLabel = scheduleTag?.label ?? null;
+
+	useEffect(() => {
+		if (!import.meta.env.DEV || !scheduleSummary || scheduleLabel == null) return;
+		if (!/janete/i.test(client.name || '')) return;
+		logPlanningTagTrace({
+			stage: 'PlanningExecutiveTags',
+			clientName: client.name,
+			monthAnchor: scheduleSummary.monthStart,
+			frequencyResolved: resolvePlanningFrequency(client),
+			monthlyGoalFromSchedule: scheduleSummary.goal,
+			plannedCountFromSchedule: scheduleSummary.plannedCount,
+			remainingCountFromSchedule: scheduleSummary.remainingCount,
+			scheduleSummaryReceivedByTags: scheduleSummary,
+			labelRendered: scheduleLabel,
+		});
+	}, [client, scheduleSummary, scheduleLabel]);
 
 	const [freqQtyDraft, setFreqQtyDraft] = useState(String(freq.quantity ?? ''));
 	useEffect(() => {

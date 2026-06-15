@@ -3,6 +3,12 @@ import type { BriefingV2 } from './types';
 import { tagsToLegacyText, leadDaysToLegacy, v2CtaToLegacyLabel } from './helpers';
 import { buildPostFrequency } from '../utils';
 
+function coercePlanningQuantity(value: unknown): number | undefined {
+	if (value == null) return undefined;
+	const n = typeof value === 'number' ? value : typeof value === 'string' ? parseInt(value, 10) : NaN;
+	return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
 /**
  * Espelha BriefingV2 nos campos LEG V1 (dual-write no save).
  *
@@ -160,9 +166,10 @@ export function applyBriefingToClientFlat(briefing: BriefingV2): Partial<Client>
         mainProfileObjective: briefing.content.profileObjective,
         momentObjective: briefing.content.currentCampaignObjective,
         monthlyObjective: briefing.content.monthFocus,
-        postFrequency: (legacy.postFrequency as string) || '',
-        postFrequencyQuantity: freq.variable ? undefined : freq.quantity,
-        postFrequencyPeriod: freq.variable ? undefined : freq.period,
+		postFrequency: (legacy.postFrequency as string) || '',
+		postFrequencyQuantity:
+			freq.variable ? undefined : coercePlanningQuantity(freq.quantity),
+		postFrequencyPeriod: freq.variable ? undefined : freq.period,
         postFrequencyVariable: freq.variable,
         preferredPostDays: briefing.planning.preferredPostDays,
         planningCalendarNotes: (legacy.planningCalendarNotes as string) || '',

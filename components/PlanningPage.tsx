@@ -37,6 +37,8 @@ import {
     computeClientMonthlySchedule,
     getCurrentMonthRange,
     logClientMonthlyScheduleAudit,
+    logPlanningTagTrace,
+    resolvePlanningFrequency,
 } from '../lib/planningSchedule';
 import type { ItemNature } from './PostOrForecastModal';
 
@@ -638,6 +640,22 @@ const PlanningPage: React.FC = () => {
         const summary = computeClientMonthlySchedule(selectedClient, planningItems, currentMonthAnchor);
         if (import.meta.env.DEV && /janete/i.test(selectedClient.name || '')) {
             logClientMonthlyScheduleAudit(selectedClient, summary);
+            logPlanningTagTrace({
+                stage: 'PlanningPage.clientScheduleSummary',
+                clientName: selectedClient.name,
+                monthAnchor: formatDateToYYYYMMDD(currentMonthAnchor),
+                frequencyResolved: resolvePlanningFrequency(selectedClient),
+                monthlyGoalFromSchedule: summary.goal,
+                plannedCountFromSchedule: summary.plannedCount,
+                remainingCountFromSchedule: summary.remainingCount,
+                scheduleSummaryReceivedByCard: summary,
+                briefingFrequencyRaw: selectedClient.briefingV2?.planning?.frequency,
+                flatFrequency: {
+                    qty: selectedClient.postFrequencyQuantity,
+                    period: selectedClient.postFrequencyPeriod,
+                    postFrequency: selectedClient.postFrequency,
+                },
+            });
         }
         return summary;
     }, [selectedClient, clientFilter, planningItems, currentMonthAnchor]);

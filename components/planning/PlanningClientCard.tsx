@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, useEffect } from 'react';
 import type { Client, User } from '../../types';
 import type { patchClientBriefing } from '../../lib/briefingV2';
 import FilterDropdown from '../tasks/FilterDropdown';
@@ -6,6 +6,7 @@ import TooltipHint from '../TooltipHint';
 import { resolveClientImageUrl, resolveClientFallbackColor } from '../../lib/clientVisual';
 import { toUploadUrl } from '../../lib/api';
 import type { ClientScheduleSummary } from '../../lib/planningSchedule';
+import { logPlanningTagTrace } from '../../lib/planningSchedule';
 import { PlanningExecutiveTags } from './PlanningExecutiveTags';
 import { PlanningMonthContentBlock } from './PlanningMonthContentBlock';
 
@@ -78,6 +79,21 @@ export const PlanningClientCard = forwardRef<HTMLElement, PlanningClientCardProp
 	},
 	ref,
 ) {
+	useEffect(() => {
+		if (!import.meta.env.DEV || !selectedClient || !scheduleSummary) return;
+		if (!/janete/i.test(selectedClient.name || '')) return;
+		logPlanningTagTrace({
+			stage: 'PlanningClientCard',
+			clientName: selectedClient.name,
+			monthAnchor: scheduleSummary.monthStart,
+			frequencyResolved: null,
+			monthlyGoalFromSchedule: scheduleSummary.goal,
+			plannedCountFromSchedule: scheduleSummary.plannedCount,
+			remainingCountFromSchedule: scheduleSummary.remainingCount,
+			scheduleSummaryReceivedByCard: scheduleSummary,
+		});
+	}, [selectedClient, scheduleSummary]);
+
 	const clientSelect = (
 		<FilterDropdown
 			layout="inline"
