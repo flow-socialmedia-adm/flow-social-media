@@ -1,4 +1,5 @@
 import type { Client, Task } from '../types';
+import type { BriefingV2 } from './briefingV2/types';
 import { resolveClientBriefing } from './briefingV2/migrate';
 import { clientHasStructuredFrequency } from './clientContext';
 import {
@@ -9,20 +10,32 @@ import {
 
 export type PlanningFrequency = { quantity: number; period: 'week' | 'month' };
 
+function normalizePlanningQuantity(value: unknown): number | null {
+	if (value == null) return null;
+	const n = typeof value === 'number' ? value : typeof value === 'string' ? parseInt(value, 10) : NaN;
+	return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 /** Frequência canônica do planejamento: briefing V2 → campos flat → string legada. */
 export function resolvePlanningFrequency(client: Client): PlanningFrequency | null {
 	const briefing = resolveClientBriefing(client);
 	const freq = briefing.planning.frequency;
 	if (freq.variable || client.postFrequencyVariable) return null;
 
-	const qty = freq.quantity ?? client.postFrequencyQuantity;
-	const period = freq.period ?? client.postFrequencyPeriod;
-	if (typeof qty === 'number' && qty > 0 && (period === 'week' || period === 'month')) {
-		return { quantity: qty, period };
+	// Briefing V2 é fonte primária — qty e period sempre do mesmo bloco (sem misturar com flat).
+	const briefingQty = normalizePlanningQuantity(freq.quantity);
+	const briefingPeriod = freq.period;
+	if (briefingQty != null && (briefingPeriod === 'week' || briefingPeriod === 'month')) {
+		return { quantity: briefingQty, period: briefingPeriod };
 	}
 
-	const parsed = parsePostFrequencyStructured(client.postFrequency);
-	return parsed;
+	const flatQty = normalizePlanningQuantity(client.postFrequencyQuantity);
+	const flatPeriod = client.postFrequencyPeriod;
+	if (flatQty != null && (flatPeriod === 'week' || flatPeriod === 'month')) {
+		return { quantity: flatQty, period: flatPeriod };
+	}
+
+	return parsePostFrequencyStructured(client.postFrequency);
 }
 
 /**
