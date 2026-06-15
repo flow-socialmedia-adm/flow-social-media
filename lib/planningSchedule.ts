@@ -4,76 +4,24 @@ import { resolveClientBriefing } from './briefingV2/migrate';
 import { clientHasStructuredFrequency } from './clientContext';
 import { normalizeDateOnly } from './dateOnly';
 import {
+	type PlanningFrequency,
+	normalizePlanningPeriod,
+	normalizePlanningQuantity,
+	resolveFrequencyFromBriefingV2,
+	resolvePlanningFrequency,
+} from './planningFrequency';
+import {
 	countCalendarWeeksInMonth,
 	formatDateToYYYYMMDD,
-	parsePostFrequencyStructured,
 } from './utils';
 
-export type PlanningFrequency = { quantity: number; period: 'week' | 'month' };
-
-function normalizePlanningQuantity(value: unknown): number | null {
-	if (value == null) return null;
-	const n = typeof value === 'number' ? value : typeof value === 'string' ? parseInt(value, 10) : NaN;
-	return Number.isFinite(n) && n > 0 ? n : null;
-}
-
-function stripAccents(s: string): string {
-	return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-/** Aceita 'month', 'monthly', 'mensal', 'mês', etc. — alinhado ao que a UI de frequência exibe. */
-export function normalizePlanningPeriod(value: unknown): 'week' | 'month' | null {
-	if (value === 'week' || value === 'month') return value;
-	if (typeof value !== 'string' || !value.trim()) return null;
-	const s = value.trim().toLowerCase();
-	const ascii = stripAccents(s);
-	if (s === 'weekly' || ascii.includes('week') || ascii.includes('semana')) return 'week';
-	if (s === 'monthly' || s === 'mensal' || s === 'mês' || ascii === 'mes' || ascii.includes('month') || ascii.includes('mes'))
-		return 'month';
-	return null;
-}
-
-/** Período do briefing — espelha formatFriendlyFrequency (só 'week' literal é semanal). */
-function resolveBriefingFrequencyPeriod(period: unknown): 'week' | 'month' | null {
-	const normalized = normalizePlanningPeriod(period);
-	if (normalized) return normalized;
-	if (period == null || period === '') return null;
-	if (typeof period === 'string' && period.trim().toLowerCase() === 'week') return 'week';
-	return 'month';
-}
-
-/** Frequência canônica do planejamento: briefing V2 → string legada → campos flat. */
-export function resolvePlanningFrequency(client: Client): PlanningFrequency | null {
-	const briefing = resolveClientBriefing(client);
-	const freq = briefing.planning.frequency;
-	if (freq.variable || client.postFrequencyVariable) return null;
-
-	const briefingQty = normalizePlanningQuantity(freq.quantity);
-	const briefingPeriod = resolveBriefingFrequencyPeriod(freq.period);
-	if (briefingQty != null && briefingPeriod != null) {
-		return { quantity: briefingQty, period: briefingPeriod };
-	}
-
-	const parsed = parsePostFrequencyStructured(client.postFrequency);
-	if (parsed) {
-		const parsedPeriod = normalizePlanningPeriod(parsed.period);
-		if (parsedPeriod != null) {
-			return { quantity: parsed.quantity, period: parsedPeriod };
-		}
-	}
-
-	if (briefingQty != null && parsed?.period === 'month') {
-		return { quantity: briefingQty, period: 'month' };
-	}
-
-	const flatQty = normalizePlanningQuantity(client.postFrequencyQuantity);
-	const flatPeriod = normalizePlanningPeriod(client.postFrequencyPeriod);
-	if (flatQty != null && flatPeriod != null) {
-		return { quantity: flatQty, period: flatPeriod };
-	}
-
-	return null;
-}
+export type { PlanningFrequency } from './planningFrequency';
+export {
+	normalizePlanningPeriod,
+	normalizePlanningQuantity,
+	resolveFrequencyFromBriefingV2,
+	resolvePlanningFrequency,
+} from './planningFrequency';
 
 /**
  * Meta mensal (Y) para tag, faltantes e previsões.

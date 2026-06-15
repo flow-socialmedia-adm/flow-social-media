@@ -2,11 +2,18 @@ import type { Client } from '../../types';
 import type { BriefingV2 } from './types';
 import { tagsToLegacyText, leadDaysToLegacy, v2CtaToLegacyLabel } from './helpers';
 import { buildPostFrequency } from '../utils';
+import { normalizePlanningPeriod, normalizePlanningQuantity } from '../planningFrequency';
 
 function coercePlanningQuantity(value: unknown): number | undefined {
 	if (value == null) return undefined;
 	const n = typeof value === 'number' ? value : typeof value === 'string' ? parseInt(value, 10) : NaN;
 	return Number.isFinite(n) && n > 0 ? n : undefined;
+}
+
+function canonicalFrequencyFields(freq: BriefingV2['planning']['frequency']) {
+	const quantity = freq.variable ? undefined : coercePlanningQuantity(freq.quantity);
+	const period = freq.variable ? undefined : normalizePlanningPeriod(freq.period) ?? undefined;
+	return { quantity, period };
 }
 
 /**
@@ -36,10 +43,11 @@ export function syncLegacyBrandGuideFields(
     }));
 
     const freq = briefing.planning.frequency;
+    const { quantity: freqQty, period: freqPeriod } = canonicalFrequencyFields(freq);
     const postFrequency = freq.variable
         ? ''
-        : freq.quantity && freq.period
-          ? buildPostFrequency(freq.quantity, freq.period)
+        : freqQty && freqPeriod
+          ? buildPostFrequency(freqQty, freqPeriod)
           : '';
 
     const strategyContentPillars = (internal.content?.pillarsDetailed?.length
@@ -102,8 +110,8 @@ export function syncLegacyBrandGuideFields(
         momentObjective: briefing.content.currentCampaignObjective || null,
         monthlyObjective: briefing.content.monthFocus || null,
         postFrequency: postFrequency || null,
-        postFrequencyQuantity: freq.variable ? null : (freq.quantity ?? null),
-        postFrequencyPeriod: freq.variable ? null : (freq.period || null),
+        postFrequencyQuantity: freq.variable ? null : (freqQty ?? null),
+        postFrequencyPeriod: freq.variable ? null : (freqPeriod ?? null),
         postFrequencyVariable: freq.variable ?? null,
         preferredPostDays: briefing.planning.preferredPostDays.length > 0 ? briefing.planning.preferredPostDays : null,
         planningCalendarNotes: internal.planning?.calendarNotes || null,
@@ -131,9 +139,23 @@ export function syncLegacyBrandGuideFields(
 export function applyBriefingToClientFlat(briefing: BriefingV2): Partial<Client> {
     const legacy = syncLegacyBrandGuideFields(briefing);
     const freq = briefing.planning.frequency;
+    const { quantity: freqQty, period: freqPeriod } = canonicalFrequencyFields(freq);
+    const briefingCanonical: BriefingV2 = {
+        ...briefing,
+        planning: {
+            ...briefing.planning,
+            frequency: freq.variable
+                ? { variable: true }
+                : {
+                      quantity: freqQty,
+                      period: freqPeriod,
+                      variable: false,
+                  },
+        },
+    };
 
     return {
-        briefingV2: briefing,
+        briefingV2: briefingCanonical,
         toneOfVoice: briefing.communication.toneOfVoice,
         brandHistory: (legacy.brandHistory as string) || '',
         brandValues: (legacy.brandValues as string) || '',
@@ -167,9 +189,8 @@ export function applyBriefingToClientFlat(briefing: BriefingV2): Partial<Client>
         momentObjective: briefing.content.currentCampaignObjective,
         monthlyObjective: briefing.content.monthFocus,
 		postFrequency: (legacy.postFrequency as string) || '',
-		postFrequencyQuantity:
-			freq.variable ? undefined : coercePlanningQuantity(freq.quantity),
-		postFrequencyPeriod: freq.variable ? undefined : freq.period,
+		postFrequencyQuantity: freq.variable ? undefined : freqQty,
+		postFrequencyPeriod: freq.variable ? undefined : freqPeriod,
         postFrequencyVariable: freq.variable,
         preferredPostDays: briefing.planning.preferredPostDays,
         planningCalendarNotes: (legacy.planningCalendarNotes as string) || '',

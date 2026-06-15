@@ -8,6 +8,7 @@ import {
     normalizeChannel,
     normalizeResponseTime,
 } from './helpers';
+import { mergePartialBriefingFrequency } from '../planningFrequency';
 
 type ClientLike = Partial<Client> & Record<string, unknown>;
 
@@ -270,7 +271,8 @@ export function isBriefingV2Complete(b: BriefingV2 | null | undefined): b is Bri
 /** Briefing seguro a partir do Client — re-migra se V2 estiver incompleto. */
 export function resolveClientBriefing(client: Client): BriefingV2 {
     if (isBriefingV2Complete(client.briefingV2)) return client.briefingV2;
-    return migrateClientToBriefingV2(client);
+    const migrated = migrateClientToBriefingV2(client);
+    return mergePartialBriefingFrequency(client.briefingV2 ?? null, migrated);
 }
 
 /** Resolve briefing: V2 canônico ou migração a partir de V1. */
@@ -279,8 +281,16 @@ export function resolveBriefingV2(
     brandGuide: Record<string, unknown> = {},
 ): BriefingV2 {
     const fromGuide = parseBriefingV2FromBrandGuide(brandGuide);
-    if (fromGuide && isBriefingV2Complete(fromGuide)) return fromGuide;
+    if (fromGuide && isBriefingV2Complete(fromGuide)) {
+        return mergePartialBriefingFrequency(fromGuide, fromGuide);
+    }
+
     const fromClient = c.briefingV2 as BriefingV2 | undefined;
-    if (fromClient && isBriefingV2Complete(fromClient)) return fromClient;
-    return migrateClientToBriefingV2(c, brandGuide);
+    if (fromClient && isBriefingV2Complete(fromClient)) {
+        return mergePartialBriefingFrequency(fromClient, fromClient);
+    }
+
+    const migrated = migrateClientToBriefingV2(c, brandGuide);
+    const partial = fromGuide ?? fromClient;
+    return mergePartialBriefingFrequency(partial, migrated);
 }
