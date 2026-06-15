@@ -1,6 +1,7 @@
 import type { Client, SocialLink } from '../../types';
 import { parseClientOwnerPreferencesFromApi } from '../../lib/client-owner-preferences';
 import { applyBriefingToClientFlat } from '../../lib/briefingV2/syncLegacy';
+import { parseBrandGuideJson, reconcileClientFrequencyFields } from '../../lib/reconcileClientFrequency';
 import { resolveBriefingV2 } from '../../lib/briefingV2/migrate';
 
 /**
@@ -40,7 +41,7 @@ export const mergeClientsPreserveEssentials = (
 };
 
 export const normalizeClient = (c: Record<string, unknown>): Client => {
-    const brandGuide = (c.brandGuideJson || {}) as Record<string, unknown>;
+    const brandGuide = parseBrandGuideJson(c.brandGuideJson);
     const address = (c.addressJson || c.address || {}) as Record<string, unknown>;
     const rawContract = (c.contractJson ?? c.contract ?? {}) as Record<string, unknown>;
     const contract = {
@@ -206,5 +207,7 @@ export const normalizeClient = (c: Record<string, unknown>): Client => {
     };
 
     const briefing = resolveBriefingV2(baseClient, brandGuide);
-    return { ...baseClient, ...applyBriefingToClientFlat(briefing) };
+    const normalized = { ...baseClient, ...applyBriefingToClientFlat(briefing) };
+    const frequencyPatch = reconcileClientFrequencyFields(normalized, brandGuide);
+    return frequencyPatch.briefingV2 ? { ...normalized, ...frequencyPatch } : normalized;
 };

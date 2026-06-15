@@ -9,6 +9,8 @@ import {
     normalizeResponseTime,
 } from './helpers';
 import { mergePartialBriefingFrequency } from '../planningFrequency';
+import { parsePostFrequencyStructured } from '../utils';
+import { normalizePlanningPeriod, normalizePlanningQuantity } from '../planningFrequency';
 
 type ClientLike = Partial<Client> & Record<string, unknown>;
 
@@ -107,10 +109,19 @@ function migrateFrequency(c: ClientLike): BriefingV2['planning']['frequency'] {
     if (variable) {
         return { quantity: undefined, period: undefined, variable: true };
     }
-    const qty = c.postFrequencyQuantity as number | undefined;
-    const period = c.postFrequencyPeriod as 'week' | 'month' | undefined;
-    if (qty != null && qty > 0 && (period === 'week' || period === 'month')) {
+    const qtyRaw = c.postFrequencyQuantity;
+    const periodRaw = c.postFrequencyPeriod;
+    const qty = normalizePlanningQuantity(qtyRaw);
+    const period = normalizePlanningPeriod(periodRaw);
+    if (qty != null && period != null) {
         return { quantity: qty, period, variable: false };
+    }
+    const parsed = parsePostFrequencyStructured(c.postFrequency as string | undefined);
+    if (parsed) {
+        const parsedPeriod = normalizePlanningPeriod(parsed.period);
+        if (parsedPeriod != null) {
+            return { quantity: parsed.quantity, period: parsedPeriod, variable: false };
+        }
     }
     return { quantity: undefined, period: 'week', variable: false };
 }
