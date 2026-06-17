@@ -7,6 +7,7 @@ import { defaultClientOwnerPreferences } from '../../lib/client-owner-preference
 import { getActivePostEligibleOwners } from '../../lib/agencyOperational';
 import {
 	formatFriendlyFrequency,
+	formatOverduePostsIndicator,
 	formatPreferredDayShort,
 	formatScheduleIndicator,
 } from '../../lib/planningFriendlyLabels';
@@ -36,6 +37,7 @@ type PlanningExecutiveTagsProps = {
 	client: Client;
 	teamMembers: User[];
 	scheduleSummary: ClientScheduleSummary | null;
+	overduePostsCount: number;
 	canEdit: boolean;
 	saving?: boolean;
 	t: (key: string, vars?: Record<string, string | number>) => string;
@@ -48,6 +50,8 @@ const tagBase =
 const tagInteractive = `${tagBase} cursor-pointer border-gray-200 bg-gray-50 text-gray-700 hover:border-indigo-300 hover:bg-indigo-50/80 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-indigo-500`;
 const tagWarning = `${tagBase} border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200`;
 const tagOk = `${tagBase} border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200`;
+const tagOverdueAlert = `${tagBase} border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200`;
+const tagOverdueNeutral = `${tagBase} border-gray-200 bg-gray-50 text-gray-400 dark:border-gray-700 dark:bg-gray-800/60 dark:text-gray-500`;
 
 const inlineInputClass =
 	'w-12 rounded border border-indigo-300 bg-white px-1 py-0.5 text-xs text-gray-900 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-indigo-600 dark:bg-gray-900 dark:text-white';
@@ -58,6 +62,7 @@ export const PlanningExecutiveTags: React.FC<PlanningExecutiveTagsProps> = ({
 	client,
 	teamMembers,
 	scheduleSummary,
+	overduePostsCount,
 	canEdit,
 	saving = false,
 	t,
@@ -100,6 +105,7 @@ export const PlanningExecutiveTags: React.FC<PlanningExecutiveTagsProps> = ({
 			)
 		: null;
 	const scheduleLabel = scheduleTag?.label ?? null;
+	const overdueTag = formatOverduePostsIndicator(overduePostsCount, t);
 
 	useEffect(() => {
 		if (!import.meta.env.DEV || !scheduleSummary || scheduleLabel == null) return;
@@ -249,6 +255,8 @@ export const PlanningExecutiveTags: React.FC<PlanningExecutiveTagsProps> = ({
 				{scheduleTag ? (
 					<span className={scheduleTag.tone === 'warning' ? tagWarning : tagOk}>{scheduleTag.label}</span>
 				) : null}
+
+				<span className={overdueTag.tone === 'alert' ? tagOverdueAlert : tagOverdueNeutral}>{overdueTag.label}</span>
 
 				{saving ? (
 					<span className="text-[10px] text-gray-400 dark:text-gray-500">{t('planning_inline_saving')}</span>

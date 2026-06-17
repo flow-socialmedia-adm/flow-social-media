@@ -91,7 +91,7 @@ const PlanningPage: React.FC = () => {
     const context = useContext(AppContext);
     if (!context) return null;
 
-    const { t, language, tasks, setTasks, workflows, clientWorkflowId, notify, setPage, agencyMode, agencyProfile, canEditModule, canViewModule, logActivity } =
+    const { t, language, tasks, setTasks, workflows, clientWorkflowId, generalWorkflowId, notify, setPage, agencyMode, agencyProfile, canEditModule, canViewModule, logActivity } =
         context;
     const canEditPlanning = canEditModule('planning');
     const canViewPosts = canViewModule('posts');
@@ -660,6 +660,18 @@ const PlanningPage: React.FC = () => {
         return summary;
     }, [selectedClient, clientFilter, planningItems, currentMonthAnchor]);
 
+    const clientOverduePostsCount = useMemo(() => {
+        if (!selectedClient || clientFilter === 'all') return 0;
+        return countClientMonthlyOverduePosts(
+            selectedClient,
+            tasks || [],
+            currentMonthAnchor,
+            workflows,
+            clientWorkflowId,
+            generalWorkflowId,
+        );
+    }, [selectedClient, clientFilter, tasks, currentMonthAnchor, workflows, clientWorkflowId, generalWorkflowId]);
+
     return (
         <div className="flex min-h-full min-w-0 w-full flex-1 flex-col">
             <ContentPageHeader
@@ -701,6 +713,7 @@ const PlanningPage: React.FC = () => {
                                 forecastGenerating={forecastGenerating}
                                 teamMembers={agencyProfile?.teamMembers ?? []}
                                 scheduleSummary={clientScheduleSummary}
+                                overduePostsCount={clientOverduePostsCount}
                                 savingClient={savingClientId === selectedClient?.id}
                                 t={t}
                                 onClientFilterChange={setClientFilter}

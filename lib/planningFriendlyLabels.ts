@@ -50,6 +50,23 @@ export type ScheduleIndicator = {
 	tone: 'neutral' | 'warning' | 'ok';
 };
 
+export type OverduePostsIndicator = {
+	label: string;
+	tone: 'neutral' | 'alert';
+};
+
+/** Tag operacional de posts atrasados no mês visível. */
+export function formatOverduePostsIndicator(
+	count: number,
+	t: (key: string, vars?: Record<string, string | number>) => string,
+): OverduePostsIndicator {
+	if (count <= 0) {
+		return { label: t('planning_overdue_posts_zero'), tone: 'neutral' };
+	}
+	const key = count === 1 ? 'planning_overdue_posts_one' : 'planning_overdue_posts_many';
+	return { label: t(key, { n: count }), tone: 'alert' };
+}
+
 /** Sempre "Posts planejados: X/Y". */
 export function formatScheduleIndicator(
 	planned: number,

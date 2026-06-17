@@ -338,6 +338,21 @@ export const translations: Translations = {
     "en": "Planned posts: {planned}/{goal}",
     "es": "Posts planificados: {planned}/{goal}",
   },
+  "planning_overdue_posts_zero": {
+    "pt": "0 atrasados",
+    "en": "0 overdue",
+    "es": "0 atrasados",
+  },
+  "planning_overdue_posts_one": {
+    "pt": "{n} post atrasado",
+    "en": "{n} overdue post",
+    "es": "{n} post atrasado",
+  },
+  "planning_overdue_posts_many": {
+    "pt": "{n} posts atrasados",
+    "en": "{n} overdue posts",
+    "es": "{n} posts atrasados",
+  },
   "planning_generate_forecasts_tooltip_incomplete": {
     "pt": "Complete o planejamento do cliente antes de gerar previsões.",
     "en": "Complete the client planning before generating forecasts.",

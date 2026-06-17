@@ -21,9 +21,22 @@ Fonte canônica: `getMonthlyPlanningGoal(cliente, ano, mês)` em `lib/planningSc
 | **Por semana** | `Y = quantidade × semanas civis do mês` (seg–dom com ≥1 dia no mês; ex.: 1/sem em mês de 5 semanas → meta **5**) |
 | **Variável** ou sem quantidade/período válidos | tag oculta (`goal = null`) |
 
-Resolução de frequência (ordem): `briefing.planning.frequency` → campos flat (`postFrequencyQuantity` / `postFrequencyPeriod`) → string legada (`parsePostFrequencyStructured`).
+Resolução de frequência (ordem): `briefingV2.planning.frequency` (se preenchido) → string legada (`postFrequency`) → campos flat (`postFrequencyQuantity` / `postFrequencyPeriod`).
 
-Quantidade e período são normalizados (`normalizePlanningQuantity`, `normalizePlanningPeriod`) — aceita `"4"`, `"monthly"`, `"mensal"`, etc. Briefing e flat **nunca são misturados** (qty de um + period de outro).
+Quantidade e período são normalizados (`normalizePlanningQuantity`, `normalizePlanningPeriod`) — aceita `"4"`, `"monthly"`, `"mensal"`, `"por mês"`, etc.
+
+### Reconciliação briefingV2 × campos legados
+
+Ao carregar (`normalizeClient`) e ao salvar (`patchClientBriefing` / `savePlanningClient`):
+
+1. Se `briefingV2.planning.frequency` tiver quantidade + período válidos → **vence** e sincroniza flat/legado.
+2. Se briefing estiver vazio → usa flat/legado e projeta em `briefingV2`.
+3. Campos sincronizados: `postFrequencyQuantity`, `postFrequencyPeriod`, `postFrequency`, `briefingV2.planning.frequency`.
+
+Inspeção: `npx tsx scripts/inspect-client-frequency.mjs`  
+Reparo: `npx tsx scripts/repair-brandguide-frequency.mjs` (opcional `--dry-run`)
+
+Briefing e flat **nunca são misturados** na resolução (qty de um + period de outro).
 
 **Mês com 5 semanas:** não altera a meta de clientes **por mês**; gera apenas alerta informativo de distribuição na Central da Agência (`intel_month_five_weeks`). Clientes **por semana** têm meta proporcional ao número real de semanas do mês.
 
@@ -70,9 +83,20 @@ Sempre: **`Posts planejados: X/Y`**
 
 Não alternar para "Faltam: N" na tag executiva.
 
+### Tag operacional — posts atrasados
+
+Métrica separada de X/Y. Fonte: `countClientMonthlyOverduePosts()` (`lib/planningOverduePosts.ts`).
+
+- Posts **reais** do mês visível; **não** previsões.
+- Atrasado = não concluído (`isTaskDone`) e (data publicação &lt; hoje **ou** marco operacional vencido).
+- Exibição: `0 atrasados` (neutro) | `N post(s) atrasado(s)` (âmbar).
+
 ### Implementação
 
-- `lib/planningSchedule.ts` — `computeClientMonthlySchedule`, `resolvePlanningFrequency`, `normalizePlanningPeriod`, `getMonthlyPlanningGoal`, `logClientMonthlyScheduleAudit`.
+- `lib/planningSchedule.ts` — `computeClientMonthlySchedule`, `resolvePlanningFrequency`, `getMonthlyPlanningGoal`.
+- `lib/planningFrequency.ts` — normalização e prioridade briefingV2.
+- `lib/reconcileClientFrequency.ts` — reconciliação load/save.
+- `lib/planningOverduePosts.ts` — `countClientMonthlyOverduePosts`.
 - `lib/dateOnly.ts` — `normalizeDateOnly` para datas de slot.
 - Consumido em `PlanningPage.tsx` → `PlanningExecutiveTags`.
 

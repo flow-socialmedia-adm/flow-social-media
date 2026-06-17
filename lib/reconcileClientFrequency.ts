@@ -5,8 +5,10 @@ import {
 	mergePartialBriefingFrequency,
 	normalizePlanningPeriod,
 	normalizePlanningQuantity,
+	resolvePlanningFrequency,
 	type PlanningFrequency,
 } from './planningFrequency';
+import { parsePostFrequencyStructured } from './utils';
 
 /** Parseia brandGuideJson quando vier como string da API. */
 export function parseBrandGuideJson(raw: unknown): Record<string, unknown> {
@@ -44,8 +46,9 @@ export function reconcileClientFrequencyFields(
 	const rawClientFreq = extractRawBriefingV2Frequency({
 		briefingV2: client.briefingV2,
 	});
+	const flatFreq = extractFlatFrequency(client);
 
-	const canonical = rawGuideFreq ?? rawClientFreq;
+	const canonical = rawGuideFreq ?? rawClientFreq ?? flatFreq;
 	if (!canonical) return {};
 
 	const baseBriefing = client.briefingV2;
@@ -77,6 +80,68 @@ function buildMinimalBriefingWithFrequency(freq: PlanningFrequency): BriefingV2 
 			preferredPostDays: [],
 			operation: { approvalChannel: '', clientResponseTime: '' },
 		},
+	};
+}
+
+/** Lê frequência dos campos flat/legado do cliente. */
+export function extractFlatFrequency(client: Pick<Client, 'postFrequency' | 'postFrequencyQuantity' | 'postFrequencyPeriod' | 'postFrequencyVariable'>): PlanningFrequency | null {
+	if (client.postFrequencyVariable) return null;
+	const flatQty = normalizePlanningQuantity(client.postFrequencyQuantity);
+	const flatPeriod = normalizePlanningPeriod(client.postFrequencyPeriod);
+	if (flatQty != null && flatPeriod != null) {
+		return { quantity: flatQty, period: flatPeriod };
+	}
+	const parsed = parsePostFrequencyStructured(client.postFrequency);
+	if (!parsed) return null;
+	const parsedPeriod = normalizePlanningPeriod(parsed.period);
+	if (parsedPeriod == null) return null;
+	return { quantity: parsed.quantity, period: parsedPeriod };
+}
+
+export function formatFrequencyLabel(freq: PlanningFrequency | null): string {
+	if (!freq) return '—';
+	return `${freq.quantity}/${freq.period}`;
+}
+
+export type ClientFrequencyInspectionRow = {
+	clientId: string;
+	clientName: string;
+	briefingFrequency: string;
+	flatFrequency: string;
+	resolvedFrequency: string;
+	needsCorrection: boolean;
+};
+
+/** Linha de inspeção para reconciliação briefingV2 × flat. */
+export function inspectClientFrequency(
+	client: Client,
+	brandGuide: Record<string, unknown> = {},
+): ClientFrequencyInspectionRow {
+	const briefingRaw = extractRawBriefingV2Frequency(brandGuide) ?? extractRawBriefingV2Frequency({ briefingV2: client.briefingV2 });
+	const flatRaw = extractFlatFrequency(client);
+	const resolved = resolvePlanningFrequency(client);
+
+	const briefingStr = formatFrequencyLabel(briefingRaw);
+	const flatStr = formatFrequencyLabel(flatRaw);
+	const resolvedStr = formatFrequencyLabel(resolved);
+
+	const needsCorrection =
+		hasConflictingFrequencyFields(client) ||
+		(briefingRaw != null &&
+			resolved != null &&
+			(briefingRaw.quantity !== resolved.quantity || briefingRaw.period !== resolved.period)) ||
+		(flatRaw != null &&
+			briefingRaw == null &&
+			resolved != null &&
+			(flatRaw.quantity !== resolved.quantity || flatRaw.period !== resolved.period));
+
+	return {
+		clientId: client.id,
+		clientName: client.name,
+		briefingFrequency: briefingStr,
+		flatFrequency: flatStr,
+		resolvedFrequency: resolvedStr,
+		needsCorrection,
 	};
 }
 

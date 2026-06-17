@@ -21,7 +21,7 @@ for (const line of readFileSync(envPath, 'utf8').split('\n')) {
 
 const { normalizeClient } = await import('../components/clients/clientUtils.ts');
 const { syncLegacyBrandGuideFields } = await import('../lib/briefingV2/syncLegacy.ts');
-const { hasConflictingFrequencyFields, parseBrandGuideJson } = await import('../lib/reconcileClientFrequency.ts');
+const { inspectClientFrequency, parseBrandGuideJson } = await import('../lib/reconcileClientFrequency.ts');
 
 const prisma = new PrismaClient();
 const rows = await prisma.client.findMany({
@@ -33,15 +33,16 @@ let repaired = 0;
 for (const row of rows) {
 	const brandGuide = parseBrandGuideJson(row.brandGuideJson);
 	const client = normalizeClient(row);
-	if (!hasConflictingFrequencyFields(client)) continue;
+	const inspection = inspectClientFrequency(client, brandGuide);
+	if (!inspection.needsCorrection) continue;
 
 	const legacy = syncLegacyBrandGuideFields(client.briefingV2);
 	const nextGuide = { ...brandGuide, ...legacy };
+	const after = inspectClientFrequency(normalizeClient({ ...row, brandGuideJson: nextGuide }), nextGuide);
 
 	console.log(`[repair] ${client.name} (${client.id})`);
-	console.log('  before flat:', brandGuide.postFrequencyQuantity, brandGuide.postFrequencyPeriod);
-	console.log('  after flat:', nextGuide.postFrequencyQuantity, nextGuide.postFrequencyPeriod);
-	console.log('  briefingV2.frequency:', JSON.stringify(nextGuide.briefingV2?.planning?.frequency));
+	console.log(`  antes: briefing=${inspection.briefingFrequency} flat=${inspection.flatFrequency} resolved=${inspection.resolvedFrequency}`);
+	console.log(`  depois: briefing=${after.briefingFrequency} flat=${after.flatFrequency} resolved=${after.resolvedFrequency}`);
 
 	if (!dryRun) {
 		await prisma.client.update({

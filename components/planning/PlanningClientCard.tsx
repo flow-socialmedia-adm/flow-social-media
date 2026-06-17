@@ -23,6 +23,7 @@ type PlanningClientCardProps = {
 	forecastGenerating: boolean;
 	teamMembers: User[];
 	scheduleSummary: ClientScheduleSummary | null;
+	overduePostsCount: number;
 	savingClient?: boolean;
 	t: (key: string, vars?: Record<string, string | number>) => string;
 	onClientFilterChange: (value: string) => void;
@@ -70,6 +71,7 @@ export const PlanningClientCard = forwardRef<HTMLElement, PlanningClientCardProp
 		forecastGenerating,
 		teamMembers,
 		scheduleSummary,
+		overduePostsCount,
 		savingClient = false,
 		t,
 		onClientFilterChange,
@@ -162,6 +164,7 @@ export const PlanningClientCard = forwardRef<HTMLElement, PlanningClientCardProp
 							client={selectedClient}
 							teamMembers={teamMembers}
 							scheduleSummary={scheduleSummary}
+							overduePostsCount={overduePostsCount}
 							canEdit={canEditPlanning}
 							saving={savingClient}
 							t={t}
