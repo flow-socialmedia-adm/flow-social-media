@@ -10,7 +10,7 @@ const DAY_SHORT: Record<string, string> = {
 	sun: 'day_sun_short',
 };
 
-/** Frequência amigável: "1 post/sem" ou "8 posts/mês ≈ 2/sem". */
+/** Frequência amigável: "1 post/sem" ou "8 posts/mês (~2/sem)". */
 export function formatFriendlyFrequency(
 	briefing: BriefingV2,
 	t: (key: string, vars?: Record<string, string | number>) => string,

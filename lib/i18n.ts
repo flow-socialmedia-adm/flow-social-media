@@ -289,9 +289,9 @@ export const translations: Translations = {
     "es": "Día",
   },
   "planning_owner_tag_empty": {
-    "pt": "Responsável",
-    "en": "Owner",
-    "es": "Responsable",
+    "pt": "Responsável não definido",
+    "en": "Owner not set",
+    "es": "Responsable no definido",
   },
   "planning_freq_friendly_empty": {
     "pt": "Frequência",
@@ -314,9 +314,9 @@ export const translations: Translations = {
     "es": "{n} posts/sem",
   },
   "planning_freq_friendly_month": {
-    "pt": "{n} posts/mês ≈ {approx}/sem",
-    "en": "{n} posts/mo ≈ {approx}/wk",
-    "es": "{n} posts/mes ≈ {approx}/sem",
+    "pt": "{n} posts/mês (~{approx}/sem)",
+    "en": "{n} posts/mo (~{approx}/wk)",
+    "es": "{n} posts/mes (~{approx}/sem)",
   },
   "planning_freq_period_week_short": {
     "pt": "por semana",
