@@ -211,6 +211,14 @@ export const AgendaPurpleBarActions: React.FC<AgendaPurpleBarActionsProps> = ({
 
     const filtersPanel = useMemo(() => {
         if (!showFiltersPopover || !filtersMenuBox) return null;
+        const postFilterButtonClass = (statusId: string) => {
+            const color = clientWorkflow?.statuses.find((status) => status.id === statusId)?.color;
+            return `rounded-md border px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-90 ${
+                color
+                    ? `${color.bg} ${color.text} ${color.border}`
+                    : 'border-gray-300 bg-gray-100 text-gray-700 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-200'
+            }`;
+        };
         return (
             <div
                 ref={filtersMenuRef}
@@ -309,7 +317,7 @@ export const AgendaPurpleBarActions: React.FC<AgendaPurpleBarActionsProps> = ({
                                         if (id) setFilters((prev) => ({ ...prev, status: id, workflow: 'current' }));
                                         setShowFiltersPopover(false);
                                     }}
-                                    className="rounded-md border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:border-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                                    className={postFilterButtonClass('em_producao')}
                                 >
                                     {t('agenda_filter_ready_to_send')}
                                 </button>
@@ -320,7 +328,7 @@ export const AgendaPurpleBarActions: React.FC<AgendaPurpleBarActionsProps> = ({
                                         if (id) setFilters((prev) => ({ ...prev, status: id, workflow: 'current' }));
                                         setShowFiltersPopover(false);
                                     }}
-                                    className="rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100 dark:border-green-800 dark:bg-green-900/30 dark:text-green-300"
+                                    className={postFilterButtonClass('aprovado')}
                                 >
                                     {t('agenda_filter_approved_not_scheduled')}
                                 </button>
@@ -331,7 +339,7 @@ export const AgendaPurpleBarActions: React.FC<AgendaPurpleBarActionsProps> = ({
                                         if (id) setFilters((prev) => ({ ...prev, status: id, workflow: 'current' }));
                                         setShowFiltersPopover(false);
                                     }}
-                                    className="rounded-md border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                                    className={postFilterButtonClass('aguardando_aprovacao')}
                                 >
                                     {t('agenda_filter_awaiting_approval')}
                                 </button>

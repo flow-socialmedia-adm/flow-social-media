@@ -13,6 +13,7 @@ import {
 	normalizePermissions,
 } from './agency-role-validation';
 import { FORBIDDEN_ACTION_DENIED, FORBIDDEN_MODULE_VIEW } from '../common/permissions/forbidden-messages';
+import { normalizeStoredColorSchemeArea, normalizeStoredColorSchemes } from './agency-color-schemes';
 
 @Injectable()
 export class AgenciesService {
@@ -37,7 +38,7 @@ export class AgenciesService {
 		}
 		if (!agencyId) throw new ForbiddenException(FORBIDDEN_MODULE_VIEW);
 		await ensureAgencySystemRoles(this.prisma, agencyId);
-		return this.prisma.agency.findUnique({
+		const agency = await this.prisma.agency.findUnique({
 			where: { id: agencyId },
 			include: {
 				agencyRoles: {
@@ -72,6 +73,38 @@ export class AgenciesService {
 				},
 			},
 		});
+		if (!agency) return null;
+		const { colorSchemesJson, ...publicAgency } = agency;
+		return {
+			...publicAgency,
+			colorSchemes: normalizeStoredColorSchemes(colorSchemesJson),
+		};
+	}
+
+	async updateMyAgencyColorScheme(area: 'posts' | 'tasks', preference: unknown) {
+		await this.access.assertCanEdit('settings');
+		const agencyId = this.ctx.get()?.agencyId;
+		if (!agencyId) throw new ForbiddenException(FORBIDDEN_MODULE_VIEW);
+
+		const normalizedArea = normalizeStoredColorSchemeArea(area, preference);
+		await this.prisma.$executeRaw`
+			UPDATE "Agency"
+			SET "colorSchemesJson" = jsonb_set(
+				COALESCE("colorSchemesJson", '{}'::jsonb),
+				ARRAY[${area}]::text[],
+				${JSON.stringify(normalizedArea)}::jsonb,
+				true
+			)
+			WHERE "id" = ${agencyId}
+		`;
+
+		const updated = await this.prisma.agency.findUnique({
+			where: { id: agencyId },
+			select: { colorSchemesJson: true },
+		});
+		return {
+			colorSchemes: normalizeStoredColorSchemes(updated?.colorSchemesJson),
+		};
 	}
 
 	async listAgencyRoles() {

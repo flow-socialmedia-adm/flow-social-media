@@ -230,6 +230,17 @@ export function getSubstatusCardLabel(
 	return t(step.nameKey);
 }
 
+/** Sub-etapa atual para derivação visual; null em status puramente macro. */
+export function getCurrentSubstatusStep(
+	task: Pick<Task, 'statusId' | 'currentActionId' | 'clientId' | 'postType' | 'category' | 'isGeneral'>,
+	workflowStatuses?: { id: string }[],
+): LinearFlowStep | null {
+	const flow = resolveLinearFlowForTask(task, workflowStatuses);
+	if (!flow) return null;
+	const step = flow[getCurrentStepIndexForTask(task, flow)];
+	return step?.actionId != null ? step : null;
+}
+
 /**
  * Agrupa passos por chave visual (visualGroup ?? statusId), preservando a ordem de primeira aparição.
  * Passos com `visualGroup` são exibidos dentro do grupo do statusId referenciado,

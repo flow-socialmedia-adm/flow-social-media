@@ -19,6 +19,7 @@ import { CheckIcon, EllipsisVerticalIcon, ChevronLeftIcon, ChevronRightIcon } fr
 import TooltipHint from './TooltipHint';
 import { getPhaseIdByStatusId, getPostColumnByStatusId } from '../lib/constants';
 import { CardOverflowSecondaryMenu } from './tasks/CardOverflowSecondaryMenu';
+import { getStatusColorVariantClass } from '../lib/getStatusColorVariants';
 
 const POST_STATUS_ORDER = ['pauta_criada', 'em_producao', 'aguardando_aprovacao', 'aprovado', 'agendado', 'publicado'] as const;
 const PHASE_IDS_ORDER = ['producao', 'aprovacao', 'publicacao'] as const;
@@ -328,6 +329,7 @@ const PostActions: React.FC<PostActionsProps> = ({
 										</div>
 										{steps.map((step) => {
 											const active = isTaskOnLinearFlowStep(task, step, linearFlow);
+											const stepBg = getStatusColorVariantClass(st.color, step.colorVariant);
 											return (
 												<button
 													key={`${step.statusId}-${step.actionId ?? 'x'}`}
@@ -343,7 +345,7 @@ const PostActions: React.FC<PostActionsProps> = ({
 													{active ? (
 														<CheckIcon className="w-3 h-3 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
 													) : (
-														<span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${st.color.bg} border ${st.color.border || ''}`} />
+														<span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${stepBg} border ${st.color.border || ''}`} />
 													)}
 													<span>{t(step.nameKey)}</span>
 												</button>

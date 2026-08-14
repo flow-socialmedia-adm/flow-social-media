@@ -42,6 +42,7 @@ model Agency {
   showGuidedTour      Boolean            @default(true)
   defaultOwnerStrategy DefaultOwnerStrategy @default(AGENCY_OWNER)
   allowStageOwners    Boolean            @default(false)
+  colorSchemesJson    Json?
   operationMode       AgencyOperationMode @default(solo)
   clientResponsibleMode ClientResponsibleMode @default(per_client_planning)
   defaultClientOwnerUserId String?

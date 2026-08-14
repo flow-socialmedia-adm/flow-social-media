@@ -46,6 +46,7 @@ const POST_STATUS_ALIAS: Record<string, string> = {
 	pauta_criada: 'ideia_post',
 	em_producao: 'fazer_post',
 	aguardando_aprovacao: 'enviar_aprovacao',
+	aprovado: 'enviar_aprovacao',
 	agendado: 'agendar_post',
 	publicado: 'agendado_postado',
 } as const;
@@ -56,6 +57,7 @@ const ALL_POST_STATUS_IDS: ReadonlySet<string> = new Set([
 	'pauta_criada',
 	'em_producao',
 	'aguardando_aprovacao',
+	'aprovado',
 	'agendado',
 	'publicado',
 ]);
@@ -118,34 +120,6 @@ export function resolveGeneralTaskWorkflowId(
 	return found?.id ?? preferred;
 }
 
-function pickColorsFromWorkflow(
-	wf: Workflow | undefined,
-	ids: readonly string[],
-): Record<string, Workflow['statuses'][0]['color']> | null {
-	if (!wf?.statuses?.length) return null;
-	const out: Record<string, Workflow['statuses'][0]['color']> = {};
-	for (const id of ids) {
-		const st = wf.statuses.find((s) => s.id === id);
-		if (!st) return null;
-		out[id] = cloneStatusColor(st.color);
-	}
-	return out;
-}
-
-function differsFromDefaults(
-	current: Record<string, Workflow['statuses'][0]['color']>,
-	defaults: Record<string, Workflow['statuses'][0]['color']>,
-	ids: readonly string[],
-): boolean {
-	for (const id of ids) {
-		const a = current[id];
-		const b = defaults[id];
-		if (!a || !b) return true;
-		if (!colorsEqual(a, b)) return true;
-	}
-	return false;
-}
-
 export function createDefaultColorSchemesPreferences(): ColorSchemesPreferences {
 	return {
 		posts: { active: 'default', custom: null },
@@ -194,54 +168,38 @@ export function normalizeColorSchemesPreferences(raw: unknown): ColorSchemesPref
 	};
 }
 
-/** Migração única: workflows já tinham cores diferentes do padrão → vira 1 custom ativo por área. */
-export function migrateColorSchemesFromWorkflows(wf: Record<string, Workflow>): ColorSchemesPreferences {
-	const next = createDefaultColorSchemesPreferences();
-	const prod =
-		wf['production'] ?? Object.values(wf).find((w) => w?.statuses?.some((s) => s.id === 'ideia_post'));
-	if (prod) {
-		const picked = pickColorsFromWorkflow(prod, CANONICAL_POST_STATUS_IDS);
-		if (picked && differsFromDefaults(picked, DEFAULT_POST_STATUS_COLORS, CANONICAL_POST_STATUS_IDS)) {
-			next.posts = {
-				active: 'custom',
-				custom: { id: 'custom', name: 'Personalizado', colors: picked },
-			};
-		}
-	}
-	const gen =
-		wf['standard_general'] ??
-		Object.values(wf).find(
-			(w) =>
-				w?.category === 'general' &&
-				w.statuses?.some((s) => s.id === 'todo') &&
-				w.statuses?.some((s) => s.id === 'done'),
-		);
-	if (gen) {
-		const picked = pickColorsFromWorkflow(gen, CANONICAL_TASK_STATUS_IDS);
-		if (picked && differsFromDefaults(picked, DEFAULT_TASK_STATUS_COLORS, CANONICAL_TASK_STATUS_IDS)) {
-			next.tasks = {
-				active: 'custom',
-				custom: { id: 'custom', name: 'Personalizado', colors: picked },
-			};
-		}
-	}
-	return next;
-}
+/**
+ * Payload compacto persistido pela agência: mantém somente overrides do custom.
+ * O esquema Padrão continua vindo de DEFAULT_*_STATUS_COLORS no frontend.
+ */
+export function serializeColorSchemeAreaPreference(
+	area: 'posts' | 'tasks',
+	preference: ColorSchemeAreaPreference,
+): ColorSchemeAreaPreference {
+	const normalized = normalizeColorSchemesPreferences({
+		posts: area === 'posts' ? preference : undefined,
+		tasks: area === 'tasks' ? preference : undefined,
+	})[area];
+	if (!normalized.custom) return { active: 'default', custom: null };
 
-/** Lê `flow_colorSchemes` ou migra a partir de `flow_workflows` (primeira execução). */
-export function loadColorSchemesPreferences(): ColorSchemesPreferences {
-	try {
-		const raw = window.localStorage.getItem('flow_colorSchemes');
-		if (raw) return normalizeColorSchemesPreferences(JSON.parse(raw));
-		const wfRaw = window.localStorage.getItem('flow_workflows');
-		if (wfRaw) {
-			const wf = JSON.parse(wfRaw) as Record<string, Workflow>;
-			return migrateColorSchemesFromWorkflows(wf);
+	const defaults = area === 'posts' ? DEFAULT_POST_STATUS_COLORS : DEFAULT_TASK_STATUS_COLORS;
+	const allowedIds = area === 'posts' ? CANONICAL_POST_STATUS_IDS : CANONICAL_TASK_STATUS_IDS;
+	const overrides: Record<string, Workflow['statuses'][0]['color']> = {};
+	for (const statusId of allowedIds) {
+		const color = normalized.custom.colors[statusId];
+		const defaultColor = defaults[statusId];
+		if (color && defaultColor && !colorsEqual(color, defaultColor)) {
+			overrides[statusId] = cloneStatusColor(color);
 		}
-	} catch {
-		/* ignore */
 	}
-	return createDefaultColorSchemesPreferences();
+	return {
+		active: normalized.active,
+		custom: {
+			id: 'custom',
+			name: normalized.custom.name,
+			colors: overrides,
+		},
+	};
 }
 
 function resolveColorsForArea(

@@ -10,6 +10,7 @@ import type {
 } from '../types';
 import { AGENCY_USER_FUNCTION_KEYS } from './agencyUserFunctions';
 import { parseAgencyRoleFlags, parseAgencyRolePermissions } from './modulePermissions';
+import { normalizeColorSchemesPreferences } from './colorSchemes';
 
 const USER_FN_ALLOWED = new Set<string>(AGENCY_USER_FUNCTION_KEYS);
 
@@ -101,6 +102,7 @@ export function mergeAgencyFromApi(agency: any, prev: AgencyProfile): AgencyProf
 		operationMode: (agency.operationMode as AgencyOperationMode) ?? 'solo',
 		clientResponsibleMode: (agency.clientResponsibleMode as ClientResponsibleMode) ?? 'per_client_planning',
 		defaultClientOwnerUserId: agency.defaultClientOwnerUserId ?? null,
+		colorSchemes: normalizeColorSchemesPreferences(agency.colorSchemes),
 		agencyRoles: Array.isArray(agency.agencyRoles)
 			? agency.agencyRoles.map(mapApiAgencyRole)
 			: prev.agencyRoles ?? [],

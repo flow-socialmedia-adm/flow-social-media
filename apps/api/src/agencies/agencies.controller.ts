@@ -1,10 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
 import { AgenciesService } from './agencies.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UpdateAgencyDto } from './dto/update-agency.dto';
 import { CreateAgencyRoleDto } from './dto/create-agency-role.dto';
 import { UpdateAgencyRoleDto } from './dto/update-agency-role.dto';
+import { UpdateAgencyColorSchemeDto } from './dto/update-agency-color-scheme.dto';
 
 @ApiTags('agencies')
 @ApiBearerAuth()
@@ -20,6 +21,11 @@ export class AgenciesController {
 	@Get('me')
 	async me() {
 		return this.service.getMyAgency();
+	}
+
+	@Patch('me/color-schemes')
+	async updateColorScheme(@Body() body: UpdateAgencyColorSchemeDto) {
+		return this.service.updateMyAgencyColorScheme(body.area, body.preference);
 	}
 
 	@Roles('owner')

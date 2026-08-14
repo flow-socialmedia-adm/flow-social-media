@@ -31,3 +31,23 @@ export function getStatusColorVariants(base: StatusDefinition['color']): {
 		dark: dark.bg,
 	};
 }
+
+/** Tom de uma sub-etapa, sempre derivado da família do status principal. */
+export function getStatusColorVariantClass(
+	base: StatusDefinition['color'],
+	variant: 'light' | 'medium' | 'strong' | 'dark' | undefined,
+): string {
+	const colors = getStatusColorVariants(base);
+	switch (variant) {
+		case 'light':
+			return colors.lighter;
+		case 'medium':
+			return colors.light;
+		case 'strong':
+			return colors.base;
+		case 'dark':
+			return colors.dark;
+		default:
+			return colors.base;
+	}
+}

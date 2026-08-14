@@ -211,6 +211,8 @@ export interface AgencyProfile {
 
   clientResponsibleMode?: ClientResponsibleMode;
   defaultClientOwnerUserId?: string | null;
+  /** Preferências visuais compartilhadas por toda a agência. */
+  colorSchemes?: ColorSchemesPreferences;
 }
 
 export type FinancialStatus = 'pending' | 'paid' | 'overdue';
@@ -323,7 +325,10 @@ export type AppContextType = {
   workflows: Record<string, Workflow>;
   setWorkflows: React.Dispatch<React.SetStateAction<Record<string, Workflow>>>;
   colorSchemes: ColorSchemesPreferences;
-  setColorSchemes: React.Dispatch<React.SetStateAction<ColorSchemesPreferences>>;
+  saveColorSchemeArea: (
+    area: ColorSchemeAreaKey,
+    preference: ColorSchemeAreaPreference,
+  ) => Promise<void>;
   clientWorkflowId: string;
   setClientWorkflowId: (id: string) => void;
   generalWorkflowId: string;

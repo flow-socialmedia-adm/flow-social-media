@@ -7,9 +7,17 @@ export const SystemSettingsPanel: React.FC = () => {
 	if (!context) return null;
 	return (
 		<div>
-			<ColorSchemeAreaSection area="posts" titleKey="settings_post_flow_title" descKey="settings_post_flow_desc" />
+			<ColorSchemeAreaSection
+				area="posts"
+				titleKey="settings_post_flow_title"
+				descKey="settings_post_flow_desc"
+			/>
 			<div className="mt-12 border-t border-gray-100 pt-10 dark:border-gray-800">
-				<ColorSchemeAreaSection area="tasks" titleKey="settings_tasks_flow_title" descKey="settings_tasks_flow_desc" />
+				<ColorSchemeAreaSection
+					area="tasks"
+					titleKey="settings_tasks_flow_title"
+					descKey="settings_tasks_flow_desc"
+				/>
 			</div>
 		</div>
 	);

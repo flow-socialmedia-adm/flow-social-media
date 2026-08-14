@@ -23,6 +23,8 @@ import {
   ActivityHistoryLineV2,
   ActivityHistoryAccountTabV2,
   ColorSchemesPreferences,
+  ColorSchemeAreaKey,
+  ColorSchemeAreaPreference,
 } from './types';
 import { AppContext } from './contexts/AppContext';
 import { AgencyClientsRosterProvider } from './contexts/AgencyClientsRosterContext';
@@ -36,8 +38,9 @@ import { mergeAgencyFromApi } from './lib/mapAgencyApi';
 import { inferSimpleAccessFromMember } from './lib/agencyUserAccess';
 import {
   applyActiveColorSchemes,
-  loadColorSchemesPreferences,
+  createDefaultColorSchemesPreferences,
   normalizeColorSchemesPreferences,
+  serializeColorSchemeAreaPreference,
 } from './lib/colorSchemes';
 import {
 	PAGE_TO_MODULE,
@@ -326,35 +329,33 @@ const App: React.FC = () => {
   const [clientWorkflowId, setClientWorkflowId] = useLocalStorage<string>('flow_clientWorkflowId', 'standard');
   const [generalWorkflowId, setGeneralWorkflowId] = useLocalStorage<string>('flow_generalWorkflowId', 'standard_general');
 
-  const [colorSchemes, setColorSchemesState] = useState<ColorSchemesPreferences>(() => loadColorSchemesPreferences());
-  const colorSchemesRef = useRef(colorSchemes);
-  colorSchemesRef.current = colorSchemes;
+  const [colorSchemes, setColorSchemesState] = useState<ColorSchemesPreferences>(
+    () => createDefaultColorSchemesPreferences(),
+  );
 
-  const setColorSchemes = useCallback((action: React.SetStateAction<ColorSchemesPreferences>) => {
-    setColorSchemesState((prev) => {
-      const next = typeof action === 'function' ? (action as (p: ColorSchemesPreferences) => ColorSchemesPreferences)(prev) : action;
-      const norm = normalizeColorSchemesPreferences(next);
-      try {
-        window.localStorage.setItem('flow_colorSchemes', JSON.stringify(norm));
-      } catch {
-        /* ignore */
-      }
-      return norm;
-    });
-  }, []);
-
-  const colorSchemeStorageSynced = useRef(false);
-  useEffect(() => {
-    if (colorSchemeStorageSynced.current) return;
-    colorSchemeStorageSynced.current = true;
+  const loadAgencyColorSchemes = useCallback((raw: unknown) => {
+    const normalized = normalizeColorSchemesPreferences(raw);
+    setColorSchemesState(normalized);
+    // A preferência legada era por navegador. A API da agência passa a ser a única fonte.
     try {
-      if (!window.localStorage.getItem('flow_colorSchemes')) {
-        window.localStorage.setItem('flow_colorSchemes', JSON.stringify(colorSchemes));
-      }
+      window.localStorage.removeItem('flow_colorSchemes');
     } catch {
       /* ignore */
     }
-  }, [colorSchemes]);
+    return normalized;
+  }, []);
+
+  const saveColorSchemeArea = useCallback(async (
+    area: ColorSchemeAreaKey,
+    preference: ColorSchemeAreaPreference,
+  ) => {
+    const response = await apiPatch<{ colorSchemes: unknown }>('/agencies/me/color-schemes', {
+      area,
+      preference: serializeColorSchemeAreaPreference(area, preference),
+    });
+    const normalized = loadAgencyColorSchemes(response.colorSchemes);
+    setAgencyProfile((prev) => ({ ...prev, colorSchemes: normalized }));
+  }, [loadAgencyColorSchemes, setAgencyProfile]);
 
   useEffect(() => {
     setWorkflows((prev) =>
@@ -550,9 +551,13 @@ const App: React.FC = () => {
   const reloadAgency = useCallback(async () => {
     try {
       const agency = await apiGet<any>('/agencies/me');
-      setAgencyProfile((prev) => mergeAgencyFromApi(agency, prev));
+      const normalizedColors = loadAgencyColorSchemes(agency.colorSchemes);
+      setAgencyProfile((prev) => ({
+        ...mergeAgencyFromApi(agency, prev),
+        colorSchemes: normalizedColors,
+      }));
     } catch {}
-  }, [setAgencyProfile]);
+  }, [loadAgencyColorSchemes, setAgencyProfile]);
 
   const addTeamMember = async (user: User) => {
       try {
@@ -670,7 +675,7 @@ const App: React.FC = () => {
     workflows,
     setWorkflows,
     colorSchemes,
-    setColorSchemes,
+    saveColorSchemeArea,
     clientWorkflowId,
     setClientWorkflowId,
     generalWorkflowId,
@@ -711,7 +716,7 @@ const App: React.FC = () => {
   }), [
     page, handleNavigationAttempt, language, setLanguage, theme, setTheme, t,
     clients, setClients, tasks, setTasks, notifications, workflows, setWorkflows,
-    colorSchemes, setColorSchemes,
+    colorSchemes, saveColorSchemeArea,
     clientWorkflowId, setClientWorkflowId, generalWorkflowId, setGeneralWorkflowId,
     financialEntries, setFinancialEntries, financialExpenses, setFinancialExpenses,
     mappedUser, handleLogin, handleLogout, hasPermission, canViewModule, canEditModule, getModulePermissions, isOperationalProfile, agencyProfile, setAgencyProfile,
@@ -808,8 +813,11 @@ const App: React.FC = () => {
       try {
         const agency = await apiGet<any>('/agencies/me');
         console.log(`[App] ✅ Dados da agência recebidos, cardOnFile:`, agency.cardOnFile);
-        
-        setAgencyProfile((prev) => mergeAgencyFromApi(agency, prev));
+        const agencyColorSchemes = loadAgencyColorSchemes(agency.colorSchemes);
+        setAgencyProfile((prev) => ({
+          ...mergeAgencyFromApi(agency, prev),
+          colorSchemes: agencyColorSchemes,
+        }));
         
         // Carregar workflows do backend e garantir uso dos fixos
         try {
@@ -854,7 +862,7 @@ const App: React.FC = () => {
           setWorkflows((prev) =>
             applyActiveColorSchemes(
               prev,
-              colorSchemesRef.current,
+              agencyColorSchemes,
               resolvedPostsWorkflowId || clientWorkflowId,
               resolvedGeneralWorkflowId || generalWorkflowId,
             ),
@@ -994,7 +1002,11 @@ const App: React.FC = () => {
           // Recarregar dados da agência também
           try {
             const agency = await apiGet<any>('/agencies/me');
-            setAgencyProfile((prev) => mergeAgencyFromApi(agency, prev));
+            const normalizedColors = loadAgencyColorSchemes(agency.colorSchemes);
+            setAgencyProfile((prev) => ({
+              ...mergeAgencyFromApi(agency, prev),
+              colorSchemes: normalizedColors,
+            }));
           } catch (err) {
             console.error('Erro ao recarregar dados da agência:', err);
           }

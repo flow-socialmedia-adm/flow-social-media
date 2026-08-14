@@ -2,7 +2,11 @@ import React from 'react';
 import type { Task, AppContextType, Client } from '../../types';
 import { PostType } from '../../types';
 import PostActions from '../PostActions';
-import { getSubstatusCardLabel } from '../../lib/taskActionFlow';
+import {
+    getCurrentSubstatusStep,
+    getSubstatusCardLabel,
+    substatusBadgeTextClass,
+} from '../../lib/taskActionFlow';
 import { agencyShowsExecutionOwner } from '../../lib/taskExecutionOwnerUi';
 import { resolveClientPostWorkflowId } from '../../lib/colorSchemes';
 import { toUploadUrl } from '../../lib/api';
@@ -18,6 +22,7 @@ import { resolveClientImageUrl, resolveClientFallbackColor } from '../../lib/cli
 import { isPostForecast } from '../../lib/postForecastVisual';
 import { StaticIcon, VideoIcon, CarouselIcon, ReelsIcon, StoryIcon, CalendarIcon, TaskExecutionByIcon } from '../icons';
 import TooltipHint from '../TooltipHint';
+import { getStatusColorVariantClass } from '../../lib/getStatusColorVariants';
 
 const POST_TYPE_ICONS: Record<PostType, React.FC<{ className?: string }>> = {
     [PostType.STATIC]: StaticIcon,
@@ -27,9 +32,12 @@ const POST_TYPE_ICONS: Record<PostType, React.FC<{ className?: string }>> = {
     [PostType.STORY]: StoryIcon,
 };
 
-function buildStatusBadgeClass(status: { color?: { bg: string; text: string } } | undefined): string {
-    const bg = status?.color?.bg || 'bg-gray-500';
-    const tx = status?.color?.text || 'text-white';
+function buildStatusBadgeClass(
+    status: { color?: { bg: string; text: string } } | undefined,
+    substatusBg?: string,
+): string {
+    const bg = substatusBg || status?.color?.bg || 'bg-gray-500';
+    const tx = substatusBg ? substatusBadgeTextClass(substatusBg) : status?.color?.text || 'text-white';
     return `shrink-0 px-2 py-0.5 rounded-lg text-[11px] font-medium leading-tight ${bg} ${tx}`;
 }
 
@@ -102,6 +110,7 @@ const PostCard: React.FC<{
     const client: Client | undefined = task.clientId ? clients.find((c) => c.id === task.clientId) : undefined;
 
     const subLine = getSubstatusCardLabel(task, t, workflow?.statuses);
+    const substatusStep = getCurrentSubstatusStep(task, workflow?.statuses);
     const displayDateRaw = getTaskDisplayDate(task);
 
     const postTypeIcon = task.postType ? POST_TYPE_ICONS[task.postType] : null;
@@ -109,7 +118,11 @@ const PostCard: React.FC<{
     const clientImageUrl = resolveClientImageUrl(client);
     const legacyLayout = sourcePage !== 'posts';
 
-    const statusBadgeClass = buildStatusBadgeClass(status);
+    const substatusBg =
+        status && substatusStep
+            ? getStatusColorVariantClass(status.color, substatusStep.colorVariant)
+            : undefined;
+    const statusBadgeClass = buildStatusBadgeClass(status, substatusBg);
     const forecast = isPostForecast(task);
     const surfaceClass = forecast
         ? 'border-dashed border-slate-300 dark:border-gray-500 bg-slate-50 dark:bg-gray-800/90 hover:border-slate-400 dark:hover:border-gray-400'

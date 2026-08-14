@@ -12,7 +12,11 @@ import {
     AGENDA_COMPACT_CLIENT_LOGO_IMAGE,
     AGENDA_COMPACT_TYPE_ICON_FRAME,
 } from '../../lib/cardRowVisual';
-import { getSubstatusCardLabel } from '../../lib/taskActionFlow';
+import {
+    getCurrentSubstatusStep,
+    getSubstatusCardLabel,
+    substatusBadgeTextClass,
+} from '../../lib/taskActionFlow';
 import {
     getAgendaCompactCardTheme,
     getAgendaFullCardTheme,
@@ -33,6 +37,7 @@ import {
     resolveAgendaCardKind,
 } from '../../lib/agendaViewMode';
 import TooltipHint from '../TooltipHint';
+import { getStatusColorVariantClass } from '../../lib/getStatusColorVariants';
 
 function formatDDMM(dateStr: string): string {
     if (!dateStr || dateStr.length < 10) return '';
@@ -148,6 +153,10 @@ const TaskCard: React.FC<{
         : (POST_TYPE_ICONS[task.postType!] ?? StaticIcon);
     const client = !task.isGeneral ? clients.find(c => c.id === task.clientId) : null;
     const subLine = getSubstatusCardLabel(task, t, currentWorkflow.statuses);
+    const substatusStep = getCurrentSubstatusStep(task, currentWorkflow.statuses);
+    const substatusBg = substatusStep
+        ? getStatusColorVariantClass(statusConfig.color, substatusStep.colorVariant)
+        : null;
     const executionLine =
         showExecutionRow && task.executionOwnerUserId
             ? t('task_execution_by', { name: resolveTeamMemberName(task.executionOwnerUserId) })
@@ -320,13 +329,19 @@ const TaskCard: React.FC<{
         const statusBadgeStyleCompact = variant === 'kanbanDesaturated' && statusHexCompact
             ? { backgroundColor: hexToRgba(statusHexCompact, 0.15), border: `1px solid ${hexToRgba(statusHexCompact, 0.35)}`, color: statusHexCompact }
             : undefined;
-        const statusBgCompact = statusConfig.color?.bg ?? 'bg-gray-100';
-        const statusTextCompact = statusConfig.color?.text ?? 'text-gray-800';
-        const statusBadgeClassCompact = variant === 'kanbanDesaturated'
-            ? (!statusBadgeStyleCompact ? `${statusBgCompact} ${statusTextCompact} border border-current` : '')
-            : sourcePage === 'agenda'
-              ? agendaTheme.substatusPillClass
-              : 'bg-black/20 text-white border border-white/20';
+        const statusBgCompact = substatusBg ?? statusConfig.color?.bg ?? 'bg-gray-100';
+        const statusTextCompact = substatusBg
+            ? substatusBadgeTextClass(substatusBg)
+            : statusConfig.color?.text ?? 'text-gray-800';
+        const substatusBadgeCompact = subLine && substatusBg
+            ? `${substatusBg} ${statusTextCompact} border ${statusConfig.color?.border ?? 'border-current'}`
+            : null;
+        const statusBadgeClassCompact = substatusBadgeCompact ??
+            (variant === 'kanbanDesaturated'
+                ? (!statusBadgeStyleCompact ? `${statusBgCompact} ${statusTextCompact} border border-current` : '')
+                : sourcePage === 'agenda'
+                  ? agendaTheme.substatusPillClass
+                  : 'bg-black/20 text-white border border-white/20');
         const dateStrCompact = formatDDMM(getTaskDisplayDate(task));
         const metaPartsCompact: string[] = [];
         if (sourcePage !== 'agenda' && dateStrCompact) metaPartsCompact.push(`📅 ${dateStrCompact}${isTaskDisplayDateProvisional(task) ? ' ⚑' : ''}`);
@@ -544,12 +559,15 @@ const TaskCard: React.FC<{
         },
         agendaFlags,
     );
-    const statusBadgeClass =
-        variant === 'kanbanDesaturated'
+    const substatusBadgeFull = subLine && substatusBg
+        ? `${substatusBg} ${substatusBadgeTextClass(substatusBg)} border ${statusConfig.color.border}`
+        : null;
+    const statusBadgeClass = substatusBadgeFull ??
+        (variant === 'kanbanDesaturated'
             ? (!statusBadgeStyle ? `${statusConfig.color.bg} ${statusConfig.color.text} border border-current` : '')
             : sourcePage === 'agenda'
               ? agendaFullTheme.substatusPillClass
-              : 'bg-black/20 text-white border border-white/20';
+              : 'bg-black/20 text-white border border-white/20');
 
     const dateStr = formatDDMM(getTaskDisplayDate(task));
     const metaParts: string[] = [];
